@@ -17,14 +17,24 @@
 |---|---|---|
 | 1 | שעת מפגש כפלט של ה-AI | ב-product-10 היא מופיעה כפלט של ה-AI, וב-PRD (FR-12) היא מחושבת בקוד. המסמך הזה פועל לפי ה-PRD: הקוד מחשב ו-ה-AI לא מחשב |
 | 2 | טיוטת מייל מול שעה שהמנהל משנה | ה-AI כותב רק פסקה אישית, בלי שעה. המייל שנשלח הוא תבנית קבועה ב-n8n שמכניסה את פרטי ההזמנה, את שעת המפגש הסופית ואת הפסקה. מייל דחייה ומייל עדכון טיסה הם תבניות קבועות בלי AI |
-| 3 | הזמנה עם טיסה שלא נמצאה | הטופס שולח גם את מספר הטיסה שנבחר. אם השרת לא מוצא אותה, ההזמנה נשמרת בסטטוס `needs_clarification` עם המספר שנשלח, ועוברת למנהל |
-| 4 | נתוני הדמה | הייבוא מבוסס על `sereno-demo-data.xlsx`, מחשב שעת מפגש בנוסחה של המוצר, ומזין תאריכי טיסה יחסיים להיום (כדי שהטיסות יישארו עתידיות בכל יום שמריצים את הייבוא) |
+| 3 | הזמנה עם טיסה שלא נמצאה | לקוח שלא מצא את טיסתו ברשימה מקליד מספר טיסה ותאריך המראה. השרת מחפש טיסה עתידית עם אותו מספר ואותו תאריך (בשעון ישראל). אם מצא, ההזמנה רגילה. אם לא, ההזמנה נשמרת בסטטוס `needs_clarification` עם המספר והתאריך שנשלחו, ועוברת למנהל |
+| 4 | נתוני הדמה | הייבוא מבוסס על `sereno-demo-data.xlsx`, מחשב שעת מפגש בנוסחה של המוצר, ומזין את כל התאריכים יחסיים להיום (כדי שהטיסות יישארו עתידיות בכל יום שמריצים את הייבוא, ראו החלטה 18) |
 | 5 | שפה | בבסיס הנתונים קודי סטטוס באנגלית. הממשק והמיילים באנגלית. התוויות בקובץ `data/lists.json` |
 | 6 | עיגול שעת מפגש | ה-PRD אומר "עיגול ל-5 דקות" בלי כיוון. הוחלט עיגול כלפי מטה (מוקדם יותר), כדי שהשעה לעולם לא תהיה מאוחרת מהנוסחה |
 | 7 | תפקיד משתמש | נשמר ב-`app_metadata.role` של Supabase Auth, ולא בטבלה רביעית. נקבע ידנית בדשבורד |
-| 8 | מעבר ל-`completed` | הסטטוס קיים ברשימה, אבל אף דרישה ב-PRD לא מגדירה מי מסמן אותו, ולכן אין פעולה שמבצעת זאת |
+| 8 | מעבר ל-`completed` | נציג שטח מסמן הזמנה `approved` כ-`completed` (FR-41), בפעולה `complete` ב-`api/order-decision.js`. ההזמנה יוצאת ממסך הנציג ונשארת בארכיון. אין מייל |
 | 9 | הזמנה שנדרש בה בירור | הזמנה ב-`needs_clarification` יכולה רק להישאר או להידחות. אם הלקוח משיב עם טיסה נכונה, הוא שולח הזמנה חדשה בטופס |
 | 10 | כשל במייל | שליחת המייל נעשית אחרי שמירת ההחלטה. אם נכשלה, ההחלטה נשמרת והמנהל רואה אזהרה. אין תור ניסיונות חוזרים |
+| 11 | לקוח חוזר | לקוח שיש לו לפחות הזמנה אחרת אחת בסטטוס `completed` (שירות שבוצע). הזמנות ממתינות, מאושרות או נדחות לא נחשבות. כך זה תואם לנתוני הדמה ולעיצוב |
+| 12 | הגנה על הטופס הציבורי | שדה נסתר `website`: אם מולא, השרת מחזיר תשובת הצלחה רגילה בלי לשמור דבר. מגבלות: עד 3 הזמנות לאותו מייל בשעה, ועד 30 הזמנות בשעה בכל המערכת. מעבר לכך `429`. הספירה היא שאילתה על `orders.created_at`, בלי טבלה נוספת |
+| 13 | שעון ושעת מפגש | כל השעות נשמרות כ-`timestamptz`, ומוצגות ומוזנות לפי `Asia/Jerusalem`, גם בדפדפן שנמצא באזור זמן אחר. שעת מפגש היא תאריך ושעה. המנהל מזין תאריך ושעה, והשרת דוחה שעת מפגש שאינה לפני ההמראה |
+| 14 | שינוי טיסה לפני אישור | לכל הזמנה `pending`, `api/orders.js` מחשב את `recommended_time` מחדש לפי `flights.departure_at` העדכני. באישור השרת שומר את הערך המחושב מחדש, והוא ברירת המחדל של `final_time` |
+| 15 | טיסות עבר | `api/flights.js` מחזיר רק טיסות שעוד לא המריאו, ו-`api/submit-order.js` דוחה טיסה שהמריאה (`400`) |
+| 16 | אירוח n8n | n8n Cloud בתוכנית Starter בתשלום (נסגרה הנקודה הפתוחה ב-`tech-stack.md`) |
+| 17 | פרטי קשר בהזמנה | השם והטלפון שהוקלדו נשמרים בכל הזמנה (`contact_name`, `contact_phone`). שליחת טופס עם מייל של לקוח קיים **לא** משנה את שורת הלקוח, כי הטופס פתוח לכולם ואסור שזר ישנה פרטים שהנציג רואה בהזמנות אחרות. כל המסכים, המיילים וה-AI משתמשים בפרטים שבהזמנה |
+| 18 | תאריכים בנתוני הדמה | כל התאריכים בנתוני הדמה (טיסות, יצירת לקוחות והזמנות, החלטות, שעות מפגש ושעת ההמראה בעת האישור) זזים יחד באותו הפרש, כך ש-10.12.2026 באקסל הוא היום שבו מריצים את הייבוא |
+| 19 | בדיקות קוד | הכלי המובנה של Node (`node --test`), בלי ספרייה נוספת. קבצי הבדיקה בתיקייה `tests/` |
+| 20 | הרצה מקומית | פרויקט Supabase אחד, בלי מסד נתונים נפרד לפיתוח (נתוני דמה בלבד). להרצה המקומית מפתחות נפרדים: מפתח סודי נוסף של אותו פרויקט Supabase, מפתח Gemini נפרד, וסוד Webhook נפרד ל-n8n. ב-n8n יש שני צומתי Webhook (`sereno` ו-`sereno-dev`), כל אחד עם סוד משלו, ושניהם מובילים לאותו תהליך. `N8N_WEBHOOK_URL` בסביבת Development של Vercel מצביע על `sereno-dev` |
 
 ---
 
@@ -57,7 +67,7 @@ HTML, CSS ו-JavaScript רגיל, בלי React ובלי כלי בנייה. הק�
 | טופס הזמנה ומסך "ממתין" | `public/order.html` | לקוח | ארבעה שלבים באותו דף, ומסך אישור בסוף. מצב הטופס בזיכרון הדף. `localStorage` רק לטיוטה |
 | כניסת צוות | `public/staff/login.html` | מנהל, נציג | |
 | מסך מנהל | `public/staff/manager.html` | מנהל | תור הזמנות, פרטים והמלצות AI, פעולות |
-| מסך נציג שטח | `public/staff/agent.html` | נציג | ההזמנות המאושרות. כפתור "Refresh" |
+| מסך נציג שטח | `public/staff/agent.html` | נציג | ההזמנות המאושרות. כפתור "Refresh", וכפתור "Mark completed" בכל כרטיס |
 | ארכיון | `public/staff/archive.html` | מנהל, נציג | דסקטופ בלבד |
 
 כללים לשכבה:
@@ -79,7 +89,7 @@ HTML, CSS ו-JavaScript רגיל, בלי React ובלי כלי בנייה. הק�
 | `api/flights.js` | GET | ציבורית, קריאה בלבד | חיפוש טיסות לטופס |
 | `api/submit-order.js` | POST | ציבורית | יצירת הזמנה |
 | `api/orders.js` | GET | מנהל, נציג | תור, פרטי הזמנה, ארכיון |
-| `api/order-decision.js` | POST | מנהל | אישור, דחייה, הערה, בירור טיסה, טיפול בשינוי טיסה |
+| `api/order-decision.js` | POST | מנהל; נציג לפעולה `complete` בלבד | אישור, דחייה, הערה, בירור טיסה, טיפול בשינוי טיסה, סימון "הושלם" |
 
 מודולים משותפים ב-`lib/` (מפורטים בסעיף 7): חיבור ל-Supabase, אימות והרשאה, עטיפת תשובות JSON, ולידציה, שכבת ה-AI, קריאה ל-n8n, ועיצוב זמנים.
 
@@ -97,7 +107,7 @@ HTML, CSS ו-JavaScript רגיל, בלי React ובלי כלי בנייה. הק�
 { "ok": false, "error": { "code": "bad_request", "message": "Flight number is required." } }
 ```
 
-קודי שגיאה: `bad_request` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `method_not_allowed` (405), `conflict` (409), `server_error` (500). ההודעה בטקסט פשוט באנגלית, בלי פרטי ספק.
+קודי שגיאה: `bad_request` (400), `unauthorized` (401), `forbidden` (403), `not_found` (404), `method_not_allowed` (405), `conflict` (409), `too_many_requests` (429), `server_error` (500). ההודעה בטקסט פשוט באנגלית, בלי פרטי ספק.
 
 ### שכבה 3: נתונים (Supabase)
 
@@ -126,13 +136,13 @@ customers 1 ───< N orders N >─── 1 flights
 | שדה | סוג | הערה |
 |---|---|---|
 | `id` | uuid, PK, ברירת מחדל `gen_random_uuid()` | |
-| `full_name` | text, not null | 2–80 תווים |
-| `phone` | text, not null | |
+| `full_name` | text, not null | 2–80 תווים. השם מההזמנה הראשונה, לא מתעדכן מהטופס (החלטה 17) |
+| `phone` | text, not null | הטלפון מההזמנה הראשונה, לא מתעדכן מהטופס |
 | `email` | text, not null, unique | נשמר באותיות קטנות. מפתח זיהוי של הלקוח |
 | `history_notes` | text | היסטוריה חופשית שה-AI משתמש בה. בנתוני הדמה בלבד |
 | `created_at` | timestamptz, ברירת מחדל `now()` | |
 
-**לקוח חוזר** לא נשמר כשדה: הוא נגזר מכך שיש ללקוח לפחות הזמנה קודמת אחת ב-`orders`. כך אין מצב שהשדה סותר את ההיסטוריה.
+**לקוח חוזר** לא נשמר כשדה: הוא נגזר מכך שיש ללקוח לפחות הזמנה אחרת אחת בסטטוס `completed` ב-`orders` (החלטה 11). כך אין מצב שהשדה סותר את ההיסטוריה.
 
 ### `flights`
 
@@ -154,6 +164,9 @@ customers 1 ───< N orders N >─── 1 flights
 | `customer_id` | uuid, not null, FK ל-`customers` | |
 | `flight_id` | uuid, FK ל-`flights`, **יכול להיות ריק** | ריק כשהטיסה לא נמצאה |
 | `flight_no_submitted` | text, not null | המספר שהטופס שלח. נשמר תמיד, כדי לנסח מייל בירור |
+| `flight_date_submitted` | date | תאריך ההמראה שהלקוח הקליד, כשלא מצא את הטיסה ברשימה. ריק כשהטיסה נבחרה מהרשימה |
+| `contact_name` | text, not null, 2–80 תווים | השם שהוקלד בהזמנה הזו (החלטה 17) |
+| `contact_phone` | text, not null | הטלפון שהוקלד בהזמנה הזו |
 | `travelers` | integer, not null, בין 1 ל-10 | |
 | `bags` | integer, not null, בין 0 ל-10 | |
 | `services` | jsonb, not null, ברירת מחדל `[]` | מערך קודים מתוך `porter`, `wheelchair` |
@@ -180,8 +193,7 @@ customers 1 ───< N orders N >─── 1 flights
 | `pending` | `approved` | מנהל | חובה `flight_id` לא ריק. נקבעים `final_time`, `approved_departure_at`, `decided_at` |
 | `pending`, `needs_clarification` | `rejected` | מנהל | |
 | `approved` | `approved` | מנהל | אישור שינוי טיסה בלבד: מתעדכנים `approved_departure_at`, `recommended_time`, `final_time` |
-
-`completed` קיים ברשימה, אבל אין פעולה שמעבירה אליו (החלטה 8).
+| `approved` | `completed` | נציג | פעולת `complete` (החלטה 8) |
 
 ### זיהוי שינוי טיסה (FR-36 עד FR-39)
 
@@ -221,6 +233,9 @@ create table public.orders (
   customer_id uuid not null references public.customers (id),
   flight_id uuid references public.flights (id),
   flight_no_submitted text not null,
+  flight_date_submitted date,
+  contact_name text not null check (char_length(contact_name) between 2 and 80),
+  contact_phone text not null,
   travelers integer not null check (travelers between 1 and 10),
   bags integer not null check (bags between 0 and 10),
   services jsonb not null default '[]'::jsonb,
@@ -257,18 +272,20 @@ grant select, insert, update on public.orders    to service_role;
 
 ### פונקציות במסד הנתונים (לפעולות שאפשר לבצע במקביל)
 
-הסטאק דורש שפעולה ששני משתמשים יכולים לבצע באותו רגע תיכתב כפונקציה בבסיס הנתונים, ותיקרא דרך `rpc`, עם עדכון מותנה אחד. כאן אלה הפעולות שמפעילות מייל: החלטה על הזמנה, וטיפול בשינוי טיסה. הקובץ `supabase/migrations/002_functions.sql`. כל פונקציה: `security invoker`, `search_path` ריק, שמות מלאים, `revoke execute` מ-`public`, `anon`, `authenticated`, ו-`grant execute` ל-`service_role`.
+הסטאק דורש שפעולה ששני משתמשים יכולים לבצע באותו רגע תיכתב כפונקציה בבסיס הנתונים, ותיקרא דרך `rpc`, עם עדכון מותנה אחד. כאן אלה החלטה על הזמנה, טיפול בשינוי טיסה, וסימון "הושלם" (כמה נציגים רואים את אותה הזמנה). הקובץ `supabase/migrations/002_functions.sql`. כל פונקציה: `security invoker`, `search_path` ריק, שמות מלאים, `revoke execute` מ-`public`, `anon`, `authenticated`, ו-`grant execute` ל-`service_role`.
 
 ```sql
 create function public.decide_order(
   p_order_id uuid, p_from text[], p_to text,
-  p_final_time timestamptz, p_notes text, p_departure timestamptz
+  p_final_time timestamptz, p_notes text, p_departure timestamptz,
+  p_recommended timestamptz
 ) returns setof public.orders
 language sql security invoker set search_path = ''
 as $$
   update public.orders
      set status = p_to,
          final_time = p_final_time,
+         recommended_time = coalesce(p_recommended, recommended_time),
          manager_notes = coalesce(p_notes, manager_notes),
          approved_departure_at = p_departure,
          decided_at = now()
@@ -292,6 +309,16 @@ as $$
      and approved_departure_at = p_expected_departure
   returning *;
 $$;
+
+create function public.complete_order(p_order_id uuid)
+returns setof public.orders
+language sql security invoker set search_path = ''
+as $$
+  update public.orders
+     set status = 'completed'
+   where id = p_order_id and status = 'approved'
+  returning *;
+$$;
 ```
 
 הפונקציה מחזירה שורה אחת אם העדכון הצליח, ואפס שורות אם התנאי כבר לא מתקיים. במקרה של אפס שורות `api/order-decision.js` מחזירה `409 conflict`, ולא שולחת מייל. (הפעולות `add_note` ו-`confirm_flight_missing` הן עדכון רגיל או לא משנות את הסטטוס, ולכן לא צריכות פונקציה כזו.)
@@ -299,7 +326,8 @@ $$;
 ### נתוני דמה
 
 הקובץ `supabase/seed/seed.sql`, מבוסס על `sereno-demo-data.xlsx` (8 לקוחות, 10 טיסות, 15 הזמנות). לאקסל יש גיליון לכל טבלה (`customers`, `flights`, `orders`) עם שמות עמודות זהים למסד, וגיליון `test_cases` שמסביר מה כל הזמנה בודקת ולא נטען למסד. כללי הייבוא:
-- תאריכי הטיסות יחסיים להיום. התאריך 10.12.2026 באקסל הוא "היום", וכל טיסה נשמרת לפי מספר הימים ממנו (למשל `date_trunc('day', now()) + interval '1 day' + time '21:20'`). שתי הטיסות של 1 ו-3 בדצמבר נשארות בעבר, ושייכות רק להזמנות `completed`.
+- **כל התאריכים יחסיים להיום (החלטה 18).** התאריך 10.12.2026 באקסל הוא "היום". כל תאריך בנתוני הדמה זז באותו מספר ימים: `departure_at` של טיסות, `created_at` של לקוחות והזמנות, `decided_at`, `final_time` ו-`approved_departure_at`. השעה ביום נשארת כמו באקסל (למשל `date_trunc('day', now()) + interval '1 day' + time '21:20'`). כך שום הזמנה או לקוח לא "נוצרו בעתיד", ושעות המפגש נשארות צמודות לטיסות. שתי הטיסות של 1 ו-3 בדצמבר נשארות בעבר, ושייכות רק להזמנות `completed`.
+- `contact_name` ו-`contact_phone` של כל הזמנה מועתקים מהלקוח שלה (האקסל לא כולל אותם).
 - בעמודת `services` רק `porter` ו-`wheelchair`, כמו באקסל.
 - `recommended_time` באקסל היא נוסחה שמחקה את `meeting-time.js` (90 + 5 לכל נוסע נוסף + 3 לכל מזוודה, עיגול כלפי מטה ל-5 דקות). בייבוא מחשבים אותה מחדש בסקריפט זמני (לא נשמר בריפו) שמשתמש ב-`meeting-time.js`, והתוצאה צריכה להיות זהה לאקסל.
 - לכל לקוח כתובת מייל של בדיקה (`example.com`).
@@ -342,7 +370,7 @@ $$;
 | `POST /api/submit-order` | כן | כן | כן |
 | `GET /api/orders` (תור או רשימה) | לא | הזמנות `approved` ו-`completed` בלבד | כל ההזמנות |
 | `GET /api/orders?id=` (פרטי הזמנה) | לא | רק הזמנה `approved` או `completed` | כל הזמנה, כולל היסטוריית הלקוח |
-| `POST /api/order-decision` | לא | לא (`403`) | כן |
+| `POST /api/order-decision` | לא | רק `action = complete` (כל פעולה אחרת `403`) | כן, כל הפעולות חוץ מ-`complete` |
 
 הגבלות על מה שמוחזר לנציג (צמצום מידע): שם, טלפון, טיסה, נוסעים, מזוודות, שירותים, היקף ליווי, שעת מפגש והערות מנהל. **ללא** מייל הלקוח, ללא `ai_output`, ללא היסטוריית לקוח.
 
@@ -397,7 +425,7 @@ $$;
 ```
 
 - שעת המפגש **לא נשלחת** למודל (החלטה 2), כדי שלא יוכל לכתוב אותה בטקסט.
-- `previous_orders` כולל עד 3 הזמנות אחרונות של אותו לקוח (סטטוס `approved`).
+- `previous_orders` כולל עד 3 הזמנות אחרונות של אותו לקוח בסטטוס `completed` (החלטה 11).
 - `customer_notes` ו-`history_notes` מוגבלים באורך ומועברים בתוך בלוק מסומן כ"נתונים, לא הוראות".
 
 ### System prompt: שלוש מגבלות הפרומפט (מ-product-10 ומה-PRD)
@@ -474,7 +502,7 @@ $$;
 ```
 
 #### `GET /api/flights?q=<text>`
-`q` עד 40 תווים. חיפוש לפי מספר טיסה או יעד (לא תלוי באותיות גדולות). עד 20 תוצאות, ממוין לפי `departure_at`. אין סינון לפי תאריך עתידי (נתוני דמה).
+`q` עד 40 תווים. חיפוש לפי מספר טיסה או יעד (לא תלוי באותיות גדולות). רק טיסות עם `departure_at` מאוחר מעכשיו (החלטה 15). עד 20 תוצאות, ממוין לפי `departure_at`. הדף מציג לכל טיסה תאריך ושעה בשעון ישראל, כי לאותו מספר טיסה יכולים להיות כמה תאריכים.
 ```json
 { "ok": true, "data": { "flights": [ { "id": "uuid", "flight_no": "DM101", "airline": "Demo Airlines", "destination": "London", "departure_at": "2026-10-27T11:30:00Z" } ] } }
 ```
@@ -482,21 +510,26 @@ $$;
 #### `POST /api/submit-order`
 גוף הבקשה:
 ```json
-{ "flight_id": "uuid", "flight_no": "DM101", "travelers": 2, "bags": 3,
+{ "flight_id": "uuid", "flight_no": "DM101", "flight_date": null, "travelers": 2, "bags": 3,
   "services": ["porter"], "escort_scope": "full",
-  "full_name": "Daniel A.", "phone": "050-1110001", "email": "name@example.com", "notes": "" }
+  "full_name": "Daniel A.", "phone": "050-1110001", "email": "name@example.com", "notes": "",
+  "website": "" }
 ```
-ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים. שגיאה: `400 bad_request`.
+טיסה מהרשימה: `flight_id` ו-`flight_no`. טיסה שהלקוח הקליד: `flight_id = null`, `flight_no` ו-`flight_date` (`YYYY-MM-DD`, היום או מאוחר יותר). `website` הוא השדה הנסתר נגד בוטים, והדף שולח אותו תמיד ריק.
+
+ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`. שגיאה: `400 bad_request`.
 
 סדר פעולות:
-1. ולידציה.
-2. חיפוש הטיסה לפי `flight_id`. אם לא נמצאה: `flight_id = null`, סטטוס `needs_clarification`, בלי שעת מפגש.
-3. חיפוש הלקוח לפי `email` (אותיות קטנות). אם קיים: עדכון `full_name` ו-`phone`. אם לא: יצירה.
-4. חישוב `recommended_time` ב-`meeting-time.js` (אם הטיסה נמצאה).
-5. הכנסת שורת `orders`.
-6. אם הטיסה נמצאה: קריאת `order_draft` ושמירת `ai_output`. אם לא: `ai_output` ריק.
-7. Webhook ל-n8n מסוג `manager_alert` (שמירת ההזמנה כבר הצליחה, כשל במייל לא נחשב כשל בשליחה).
-8. תשובה ללקוח:
+1. אם `website` אינו ריק: תשובת הצלחה רגילה עם אסמכתא אקראית, בלי לשמור ובלי מייל (החלטה 12).
+2. ולידציה.
+3. מגבלת כמות: יותר מ-3 הזמנות מאותו מייל בשעה האחרונה, או יותר מ-30 הזמנות בשעה האחרונה בכל המערכת, מחזירים `429 too_many_requests` עם ההודעה "Too many requests, please try again later".
+4. חיפוש הטיסה: לפי `flight_id`, ואם נשלח רק `flight_date`, לפי `flight_no` (לא תלוי באותיות גדולות) ותאריך ההמראה בשעון ישראל. טיסה לפי `flight_id` שכבר המריאה: `400`. אם לא נמצאה טיסה עתידית: `flight_id = null`, סטטוס `needs_clarification`, בלי שעת מפגש, ונשמרים `flight_no_submitted` ו-`flight_date_submitted`.
+5. חיפוש הלקוח לפי `email` (אותיות קטנות). אם קיים: משתמשים בו בלי לשנות אותו. אם לא: יצירה. השם והטלפון שהוקלדו נשמרים בהזמנה (`contact_name`, `contact_phone`, החלטה 17).
+6. חישוב `recommended_time` ב-`meeting-time.js` (אם הטיסה נמצאה).
+7. הכנסת שורת `orders`.
+8. אם הטיסה נמצאה: קריאת `order_draft` ושמירת `ai_output`. אם לא: `ai_output` ריק.
+9. Webhook ל-n8n מסוג `manager_alert` (שמירת ההזמנה כבר הצליחה, כשל במייל לא נחשב כשל בשליחה).
+10. תשובה ללקוח:
 ```json
 { "ok": true, "data": { "reference": "A1B2C3D4", "status": "pending" } }
 ```
@@ -526,22 +559,27 @@ $$;
   "ai_output": { }
 } ], "page": 1 } }
 ```
-לנציג: ללא `customer.email`, ללא `ai_output`, ללא `is_returning_customer`, ללא היסטוריה. בפרטי הזמנה למנהל (`id=`) נוספת רשימת `previous_orders` (עד 5 הזמנות של אותו לקוח).
-`is_returning_customer` מחושב בקוד: שאילתה אחת שסופרת הזמנות קודמות לפי `customer_id` של השורות שהוחזרו.
+`customer.full_name` ו-`customer.phone` נלקחים מ-`contact_name` ו-`contact_phone` של ההזמנה (החלטה 17). כך גם `customer_first_name` בקלט ל-AI ו-`customer_name` ב-Webhook ל-n8n.
+לנציג: ללא `customer.email`, ללא `ai_output`, ללא `is_returning_customer`, ללא היסטוריה. בפרטי הזמנה למנהל (`id=`) נוספת רשימת `previous_orders` (עד 5 הזמנות אחרות של אותו לקוח, בכל סטטוס, בלי ההזמנה הנוכחית).
+`is_returning_customer` מחושב בקוד: שאילתה אחת שסופרת, לפי `customer_id` של השורות שהוחזרו, הזמנות אחרות בסטטוס `completed` (החלטה 11).
+להזמנות `pending`, `recommended_time` בתשובה מחושב מחדש ב-`meeting-time.js` לפי `flights.departure_at` העדכני, ולא נלקח מהעמודה (החלטה 14).
+`view=approved` מחזיר רק `approved`, ולכן הזמנה שסומנה `completed` יוצאת ממסך הנציג.
 
 #### `POST /api/order-decision`
-דורש טוקן, תפקיד `manager`. גוף הבקשה: `{ "order_id": "uuid", "action": "...", ... }`.
+דורש טוקן. תפקיד `manager` לכל הפעולות חוץ מ-`complete`, ותפקיד `agent` לפעולה `complete` בלבד. גוף הבקשה: `{ "order_id": "uuid", "action": "...", ... }`.
 
 | `action` | שדות נוספים | תנאי | פעולה | מייל |
 |---|---|---|---|---|
-| `approve` | `final_time` (ISO, ברירת מחדל `recommended_time`), `manager_notes` (אופציונלי) | סטטוס `pending` וגם `flight_id` לא ריק | `rpc decide_order` ל-`approved`, `approved_departure_at = flights.departure_at` | `customer_approved` |
+| `approve` | `final_time` (ISO, ברירת מחדל `recommended_time` שחושב מחדש), `manager_notes` (אופציונלי) | סטטוס `pending` וגם `flight_id` לא ריק | חישוב מחדש של `recommended_time` לפי `flights.departure_at` העדכני, ואז `rpc decide_order` ל-`approved` עם `p_recommended`, `approved_departure_at = flights.departure_at` | `customer_approved` |
 | `reject` | `manager_notes` (אופציונלי) | סטטוס `pending` או `needs_clarification` | `rpc decide_order` ל-`rejected` | `customer_rejected` |
 | `add_note` | `manager_notes` | כל סטטוס | עדכון `manager_notes` | אין |
 | `confirm_flight_missing` | | סטטוס `needs_clarification`, ו-`ai_output.clarification.sent_at` ריק | קריאת `clarification_draft`, שמירה ב-`ai_output.clarification` | `customer_clarification` |
 | `approve_flight_change` | `final_time` (אופציונלי) | `flight_change_pending` | חישוב מחדש של `recommended_time`, `rpc resolve_flight_change` עם `p_ignore = false` | `customer_flight_change` |
 | `ignore_flight_change` | | `flight_change_pending` | `rpc resolve_flight_change` עם `p_ignore = true` | אין |
+| `complete` (נציג) | | סטטוס `approved` | `rpc complete_order` | אין |
 
-- `final_time` חייב להיות תאריך תקין. אין הגבלה נוספת על הערך (המנהל אחראי).
+- `final_time` חייב להיות תאריך ושעה תקינים, ומוקדם משעת ההמראה. אחרת `400` עם ההודעה "Meeting time must be before departure". הדף שולח את מה שהמנהל הזין בשעון ישראל, מומר ל-ISO (החלטה 13).
+- `complete` שנשלח פעמיים, או להזמנה שאינה `approved`, מחזיר `409`.
 - התשובה: `{ "ok": true, "data": { "order": { ... }, "email_sent": true } }`. כש-`email_sent` הוא `false` המסך מציג אזהרה (החלטה 10).
 - מעבר לא חוקי או `rpc` שלא החזיר שורה מחזירים `409 conflict`.
 - `confirm_flight_missing` כשנשלח כבר: `409`.
@@ -571,14 +609,14 @@ $$;
 }
 ```
 
-ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean).
+ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean).
 
 ### 5.3 תהליך ב-n8n
 
 תהליך אחד, `n8n/sereno-notifications.json` (ייצוא ללא Credentials):
 
 ```
-Webhook (POST, Header Auth)
+Webhook sereno + Webhook sereno-dev (POST, Header Auth, סוד נפרד לכל אחד)
    └► Switch על type
         ├ manager_alert           ► Set (נושא וגוף)  ─┐
         ├ customer_approved       ► Set              ─┤
@@ -587,11 +625,11 @@ Webhook (POST, Header Auth)
         └ customer_flight_change  ► Set              ─┘
 ```
 
-- **Webhook:** כתובת Production (אחרי פרסום התהליך), שיטת POST, אימות Header auth, מצב תגובה "Immediately".
+- **Webhook:** שני צמתים, `sereno` (לאתר החי) ו-`sereno-dev` (להרצה מקומית), כל אחד עם Credentials משלו של Header auth, ושניהם מחוברים לאותו Switch (החלטה 20). כתובות Production (אחרי פרסום התהליך), שיטת POST, מצב תגובה "Immediately".
 - **תבניות:** טקסט קבוע באנגלית בצמתי Set. במייל האישור: פרטי הטיסה, שעת המפגש, מספר נוסעים ומזוודות, שירותים, היקף ליווי, וה-`ai_paragraph` אם קיים. מייל דחייה: הודעה על הדחייה. מייל בירור: בקשה לאמת מחדש מספר טיסה ותאריך, עם הפסקה או פסקה קבועה אם ה-AI נכשל. מייל עדכון: השעה הקודמת והחדשה.
 - **Allowlist (חוק הסטאק "רק לכתובות בדיקה"):** צומת Code עם רשימת כתובות הבדיקה. כתובת שלא ברשימה לא מקבלת מייל, והתהליך רושם זאת. כתובת מנהל ההתראות מוגדרת בצומת של `manager_alert`.
 - **שליחה:** צומת Send Email עם Credentials של Gmail SMTP (`smtp.gmail.com`, פורט 465 או 587, סיסמת אפליקציה). הסיסמה נשמרת ב-Credentials של n8n בלבד.
-- **אירוח:** n8n Cloud בתקופת הניסיון, או מופע הקורס אם קיים (נקודה פתוחה ב-`tech-stack.md`).
+- **אירוח:** n8n Cloud בתוכנית Starter בתשלום (החלטה 16).
 
 ### 5.4 התאמה בין האוטומציות בעשרת ההיבטים לרכיבים
 
@@ -649,7 +687,7 @@ meeting = עיגול כלפי מטה לכפולה של 5 דקות
 |---|---|
 | Credentials של n8n | סיסמת האפליקציה של Gmail (SMTP) |
 | דשבורד Supabase | משתמשי הצוות, `app_metadata.role`, הגדרת "Allow new users to sign up" כבויה |
-| `.env.local` (הרצה מקומית בלבד) | מפתחות dev נפרדים: `SUPABASE_SECRET_KEY`, `GEMINI_API_KEY`, `N8N_WEBHOOK_SECRET`. הסטודנט מדביק אותם בעצמו |
+| `.env.local` (הרצה מקומית בלבד) | מפתחות dev נפרדים: `SUPABASE_SECRET_KEY` (מפתח סודי נוסף של אותו פרויקט), `GEMINI_API_KEY`, `N8N_WEBHOOK_SECRET` (הסוד של Webhook `sereno-dev`). הסטודנט מדביק אותם בעצמו (החלטה 20) |
 
 ### מה מגיע לדפדפן, ומה אסור
 
@@ -723,6 +761,7 @@ sereno/                          ריפו ציבורי, ענף main
 │       └── seed.sql             נתוני דמה
 ├── n8n/
 │   └── sereno-notifications.json   ייצוא התהליך, ללא Credentials
+├── tests/                       בדיקות קוד (`node --test`), למשל meeting-time.test.js
 ├── ai-tests.md                  בדיקות AI: 20 קלטים, תוצאה צפויה, אחוז הצלחה
 ├── vercel.json                  outputDirectory: "public"
 ├── package.json                 "type": "module", תלות: @supabase/supabase-js
@@ -758,6 +797,9 @@ sereno/                          ריפו ציבורי, ענף main
 | FR-31 (מייל ללקוח) | `lib/notify.js` ← n8n (`customer_approved`, `customer_rejected`) |
 | FR-33 עד FR-35 (ארכיון) | `api/orders.js` עם `view=archive`, `archive.html` |
 | FR-36 עד FR-39 (שינוי טיסה) | `flight_change_pending` ב-`lib/orders-view.js`, `resolve_flight_change`, `customer_flight_change` |
+| FR-40 (הגנה על הטופס) | שדה `website` ומגבלות כמות ב-`api/submit-order.js` |
+| FR-41 (סימון "הושלם") | פעולת `complete` ב-`api/order-decision.js`, `complete_order`, כפתור ב-`agent.html` |
+| FR-42 (שינוי טיסה לפני אישור) | חישוב מחדש ב-`lib/orders-view.js` ובפעולת `approve` |
 | דרישות לא-פונקציונליות | אנגלית LTR, רספונסיבי, נגישות בסיסית: `tokens.css`, `base.css` |
 
 ---
