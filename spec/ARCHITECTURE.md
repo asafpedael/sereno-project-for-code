@@ -813,3 +813,37 @@ sereno/                          ריפו ציבורי, ענף main
 3. **Gemini:** האם המפתח נשלח בכותרת (ולא רק כפרמטר בכתובת), ואם `generateContent` עדיין הממשק המומלץ לעומת Interactions API.
 4. **n8n:** שם הכותרת המדויק בהגדרת Header auth, וצומת Send Email עם SMTP של Gmail בגרסה שבשימוש.
 5. **Node:** אם נשתמש ב-`import ... with { type: 'json' }` לקריאת `data/lists.json` בגרסת Node של הפרויקט, או בקריאה עם `fs`.
+
+---
+
+## Key decisions (ADRs)
+
+### ADR-1: Seed dates relative to the day the seed runs
+**Context:** The demo data (Excel) uses fixed dates around 10 Dec 2026, but decision 18 requires flights to stay in the future whenever the seed is run.
+**Decision:** `supabase/seed/seed.sql` defines a session-only helper `pg_temp.il(day_offset, time)` that returns "today in Asia/Jerusalem + offset, at that local time". Every timestamp in the seed uses it; Excel's 10 Dec = day 0. The seed clears the three tables first, so it can be re-run.
+**Consequences:** Re-running the seed refreshes all dates together (DST handled by the time zone). It must be run before 14:30 Israel time on the day of a check or demo, otherwise some of "today's" flights are already past. Re-running deletes any test orders.
+
+### ADR-2: Loading `data/lists.json` with an import attribute
+**Context:** ARCHITECTURE §9 point 5 left open whether to load the lists with `import ... with { type: 'json' }` or with `fs`.
+**Decision:** `api/config.js` uses `import lists from '../data/lists.json' with { type: 'json' }`.
+**Consequences:** Verified in `vercel dev` and in the Production deployment (Node 26): `/api/config` returns the lists. No file-system paths to manage.
+
+### ADR-3: Gemini through `generateContent` with the key in a header
+**Context:** ARCHITECTURE §9 point 3. Google's current docs show mostly the newer Interactions API in their examples, and do not say `generateContent` is deprecated.
+**Decision:** Keep REST `generateContent` with `responseMimeType` + `responseSchema`, as planned. The key is sent in the `x-goog-api-key` header, never in the URL.
+**Consequences:** Verified in M1: `gemini-3.5-flash-lite` returned valid JSON matching the `order_draft` schema. `gemini-3.8-flash` (the default) answered `503 UNAVAILABLE` (high demand) on every attempt during M1, so the real AI layer in M4 must treat 503/timeouts as a normal failure, and the fallback model can be selected through `GEMINI_MODEL`. Revisit the Interactions API if `generateContent` is announced as deprecated.
+
+### ADR-4: `meeting-time.js` stays in `public/js/`
+**Context:** ARCHITECTURE §9 point 1: it is not yet known whether Vercel bundles a file from `public/` into a function that imports it.
+**Decision:** Keep `public/js/meeting-time.js` as the single source of the formula for now. In M1 it is used only by the seed-time script; no function imports it yet. `outputDirectory: "public"` with `framework: null` is confirmed working.
+**Consequences:** Bundling must be checked on the first deploy of M2 (when `api/submit-order.js` imports it). If it is not bundled, move it to `lib/` and serve a copy via `data/`, as §7 already allows.
+
+### ADR-5: The n8n export in the repo holds placeholders only
+**Context:** The repository is public, and the workflow contains test inbox addresses, the sender address and credentials.
+**Decision:** `n8n/sereno-notifications.json` uses `example.com` placeholder addresses and no credentials. The real allowlist, manager address, sender address, SMTP credential and the two Header Auth credentials exist only inside n8n.
+**Consequences:** After importing the file into n8n, these values must be filled in by hand. Changes made in n8n are not reflected in the repo file unless it is exported again and the real addresses are replaced with placeholders.
+
+### ADR-6: Local run loads `.env.local` explicitly
+**Context:** For this project (no framework) `vercel dev` loaded the Config values from the Vercel Development environment but did not load the secrets from `.env.local`. Also, `vercel link` overwrote `.env.local` once. On Windows, `vercel dev` needs Developer Mode (it creates symlinks).
+**Decision:** Start the local server through Node with the env file: `node --env-file=.env.local <vercel CLI>/dist/vc.js dev --listen 3000`. Never run `vercel link` / `vercel env pull` into `.env.local`.
+**Consequences:** Secrets stay only in `.env.local` (Development secrets are not stored in Vercel). The run command is longer and depends on the global Vercel CLI path; it is recorded in CLAUDE.md.

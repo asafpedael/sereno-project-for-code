@@ -57,5 +57,5 @@ Progress marks, next to the milestone title in MILESTONES.md: no mark = not buil
 
 ## Run commands
 > Claude fills these in as soon as the app can run (normally at the end of Milestone 1), and updates them if they change.
-- **Run (dev):** `<command>`
-- **Test:** `<command, or "none">`
+- **Run (dev):** `node --env-file=.env.local "$env:APPDATA\npm\node_modules\vercel\dist\vc.js" dev --listen 3000` (PowerShell; then open http://localhost:3000)
+- **Test:** none (`node --test` comes in Milestone 2)
