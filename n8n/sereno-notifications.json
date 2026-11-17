@@ -1,0 +1,613 @@
+{
+  "name": "Sereno notifications",
+  "nodes": [
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000001",
+      "name": "Webhook sereno",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ],
+      "webhookId": "5e7e0000-0000-4000-8000-000000000002",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sereno",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000003",
+      "name": "Webhook sereno-dev",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        500
+      ],
+      "webhookId": "5e7e0000-0000-4000-8000-000000000004",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sereno-dev",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000005",
+      "name": "Switch on type",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        260,
+        350
+      ],
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e7e0000-0000-4000-8000-000000000006",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "manager_alert",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "manager_alert"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e7e0000-0000-4000-8000-000000000007",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "customer_approved",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "customer_approved"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e7e0000-0000-4000-8000-000000000008",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "customer_rejected",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "customer_rejected"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e7e0000-0000-4000-8000-000000000009",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "customer_clarification",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "customer_clarification"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "5e7e0000-0000-4000-8000-000000000010",
+                    "leftValue": "={{ $json.body.type }}",
+                    "rightValue": "customer_flight_change",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "customer_flight_change"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000011",
+      "name": "Set manager_alert",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        520,
+        50
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000012",
+              "name": "to",
+              "value": "manager-inbox@example.com",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000013",
+              "name": "subject",
+              "value": "=Sereno: new order {{ $json.body.reference }}{{ $json.body.needs_clarification ? \" (needs clarification)\" : \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000014",
+              "name": "text",
+              "value": "=New order {{ $json.body.reference }} from {{ $json.body.customer_name }}.\nFlight: {{ $json.body.flight_no }} to {{ $json.body.destination }}, {{ $json.body.departure_local }}.\nOpen the manager dashboard to review it.",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000015",
+              "name": "type",
+              "value": "manager_alert",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000016",
+      "name": "Set customer_approved",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        520,
+        200
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000017",
+              "name": "to",
+              "value": "={{ $json.body.to }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000018",
+              "name": "subject",
+              "value": "=Your Sereno escort is confirmed ({{ $json.body.reference }})",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000019",
+              "name": "text",
+              "value": "=Hello {{ $json.body.customer_name }},\n\nYour airport escort is confirmed.\nFlight: {{ $json.body.flight_no }} to {{ $json.body.destination }}, {{ $json.body.departure_local }}\nMeeting time: {{ $json.body.meeting_time_local }}\nTravelers: {{ $json.body.travelers }}, bags: {{ $json.body.bags }}\n\n{{ $json.body.ai_paragraph || \"\" }}\n\nSereno",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000020",
+              "name": "type",
+              "value": "customer_approved",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000021",
+      "name": "Set customer_rejected",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        520,
+        350
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000022",
+              "name": "to",
+              "value": "={{ $json.body.to }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000023",
+              "name": "subject",
+              "value": "=About your Sereno order ({{ $json.body.reference }})",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000024",
+              "name": "text",
+              "value": "=Hello {{ $json.body.customer_name }},\n\nWe are sorry, we cannot provide an escort for this order.\n\nSereno",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000025",
+              "name": "type",
+              "value": "customer_rejected",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000026",
+      "name": "Set customer_clarification",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        520,
+        500
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000027",
+              "name": "to",
+              "value": "={{ $json.body.to }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000028",
+              "name": "subject",
+              "value": "=Please check your flight details ({{ $json.body.reference }})",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000029",
+              "name": "text",
+              "value": "=Hello {{ $json.body.customer_name }},\n\n{{ $json.body.ai_paragraph || \"We could not find your flight. Please check the flight number and date and reply to this email.\" }}\n\nSereno",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000030",
+              "name": "type",
+              "value": "customer_clarification",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000031",
+      "name": "Set customer_flight_change",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        520,
+        650
+      ],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000032",
+              "name": "to",
+              "value": "={{ $json.body.to }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000033",
+              "name": "subject",
+              "value": "=Your Sereno meeting time has changed ({{ $json.body.reference }})",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000034",
+              "name": "text",
+              "value": "=Hello {{ $json.body.customer_name }},\n\nYour flight time changed, so your meeting time changed too.\nPrevious meeting time: {{ $json.body.previous_meeting_time_local }}\nNew meeting time: {{ $json.body.meeting_time_local }}\n\nSereno",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000035",
+              "name": "type",
+              "value": "customer_flight_change",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000036",
+      "name": "Allowlist check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        780,
+        350
+      ],
+      "parameters": {
+        "jsCode": "// Only test inboxes may receive email. Put the real test addresses here in n8n (not in the repo).\nconst ALLOWLIST = ['test-inbox@example.com', 'manager-inbox@example.com'];\n\nreturn $input.all().map((item) => {\n  const to = String(item.json.to || '').trim().toLowerCase();\n  return { json: { ...item.json, to, allowed: ALLOWLIST.includes(to) } };\n});"
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000037",
+      "name": "Is allowed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1040,
+        350
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000038",
+              "leftValue": "={{ $json.allowed }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000039",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1300,
+        250
+      ],
+      "parameters": {
+        "fromEmail": "sender@example.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.text }}",
+        "options": {
+          "appendAttribution": false
+        }
+      }
+    },
+    {
+      "id": "5e7e0000-0000-4000-8000-000000000040",
+      "name": "Blocked - not in allowlist",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        450
+      ],
+      "parameters": {},
+      "notes": "No email sent. The blocked address is visible in this node's execution data."
+    }
+  ],
+  "connections": {
+    "Webhook sereno": {
+      "main": [
+        [
+          {
+            "node": "Switch on type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook sereno-dev": {
+      "main": [
+        [
+          {
+            "node": "Switch on type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch on type": {
+      "main": [
+        [
+          {
+            "node": "Set manager_alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set customer_approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set customer_rejected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set customer_clarification",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set customer_flight_change",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set manager_alert": {
+      "main": [
+        [
+          {
+            "node": "Allowlist check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set customer_approved": {
+      "main": [
+        [
+          {
+            "node": "Allowlist check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set customer_rejected": {
+      "main": [
+        [
+          {
+            "node": "Allowlist check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set customer_clarification": {
+      "main": [
+        [
+          {
+            "node": "Allowlist check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set customer_flight_change": {
+      "main": [
+        [
+          {
+            "node": "Allowlist check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Allowlist check": {
+      "main": [
+        [
+          {
+            "node": "Is allowed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is allowed?": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Blocked - not in allowlist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

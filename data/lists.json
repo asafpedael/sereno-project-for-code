@@ -1,0 +1,17 @@
+{
+  "statuses": [
+    { "code": "pending", "label": "Pending approval" },
+    { "code": "approved", "label": "Approved" },
+    { "code": "rejected", "label": "Rejected" },
+    { "code": "needs_clarification", "label": "Needs clarification" },
+    { "code": "completed", "label": "Completed" }
+  ],
+  "services": [
+    { "code": "porter", "label": "Porter / luggage help" },
+    { "code": "wheelchair", "label": "Wheelchair" }
+  ],
+  "escort_scopes": [
+    { "code": "full", "label": "Full (to the gate)" },
+    { "code": "partial", "label": "Partial (to security)" }
+  ]
+}
