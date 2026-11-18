@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Book your escort · Sereno</title>
+  <meta name="description" content="Book a VIP departure escort with Sereno in four short steps.">
+  <link rel="preload" href="/assets/fonts/assistant-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <script type="module" src="/js/order-form.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="brand">Sereno</span>
+      <span class="site-header__meta" id="step-counter">Step 1 of 4</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="container-narrow form-page">
+
+      <form id="order-form" class="form-shell" novalidate>
+        <ol class="progress" aria-label="Booking progress">
+          <li class="progress__step" data-progress="1">Flight</li>
+          <li class="progress__step" data-progress="2">Travellers</li>
+          <li class="progress__step" data-progress="3">Escort</li>
+          <li class="progress__step" data-progress="4">Details</li>
+        </ol>
+
+        <!-- Step 1: Flight -->
+        <section class="form-step stack-lg" data-step="1" aria-labelledby="heading-1">
+          <h1 class="h3 step-heading" id="heading-1" tabindex="-1">Select your flight</h1>
+          <div class="field" id="field-flight">
+            <label class="field__label" for="flight-search">Search by flight number or destination</label>
+            <input class="input" id="flight-search" type="search" maxlength="40" autocomplete="off"
+                   placeholder="e.g. DM101 or London" aria-describedby="flight-status flight-error">
+            <p class="field__hint" id="flight-status" role="status" aria-live="polite"></p>
+            <div class="option-list" id="flight-results" role="group" aria-label="Flights" hidden></div>
+            <p class="field__error" id="flight-error" hidden></p>
+          </div>
+          <div class="field">
+            <label class="field__label" for="departure-time">Departure time</label>
+            <input class="input" id="departure-time" type="text" readonly placeholder="Auto-filled from flight">
+          </div>
+        </section>
+
+        <!-- Step 2: Travellers and bags -->
+        <section class="form-step stack-lg" data-step="2" aria-labelledby="heading-2" hidden>
+          <h1 class="h3 step-heading" id="heading-2" tabindex="-1">Travellers and bags</h1>
+
+          <div class="field" id="field-travelers">
+            <label class="field__label" for="travelers" id="label-travelers">Travellers (1–10)</label>
+            <div class="stepper" role="group" aria-labelledby="label-travelers">
+              <button class="stepper__btn" type="button" data-target="travelers" data-delta="-1" aria-label="Fewer travellers">−</button>
+              <input class="stepper__input" id="travelers" type="number" inputmode="numeric" min="1" max="10" step="1" value="1"
+                     aria-describedby="travelers-error">
+              <button class="stepper__btn" type="button" data-target="travelers" data-delta="1" aria-label="More travellers">+</button>
+            </div>
+            <p class="field__error" id="travelers-error" hidden></p>
+          </div>
+
+          <div class="field" id="field-bags">
+            <label class="field__label" for="bags" id="label-bags">Checked bags (0–10)</label>
+            <div class="stepper" role="group" aria-labelledby="label-bags">
+              <button class="stepper__btn" type="button" data-target="bags" data-delta="-1" aria-label="Fewer bags">−</button>
+              <input class="stepper__input" id="bags" type="number" inputmode="numeric" min="0" max="10" step="1" value="0"
+                     aria-describedby="bags-error">
+              <button class="stepper__btn" type="button" data-target="bags" data-delta="1" aria-label="More bags">+</button>
+            </div>
+            <p class="field__error" id="bags-error" hidden></p>
+          </div>
+
+          <fieldset>
+            <legend class="fieldset__legend">Optional services</legend>
+            <label class="check"><input class="check__input" type="checkbox" name="services" value="porter"> Porter / luggage help</label>
+            <label class="check"><input class="check__input" type="checkbox" name="services" value="wheelchair"> Wheelchair</label>
+          </fieldset>
+
+          <div class="panel-dark" id="meeting-panel" aria-live="polite">
+            <p class="panel-dark__label">Suggested meeting time</p>
+            <p class="panel-dark__time" id="meeting-time"></p>
+            <p class="panel-dark__date" id="meeting-date" hidden></p>
+            <p class="panel-dark__note">Suggestion only. Subject to manager approval.</p>
+          </div>
+        </section>
+
+        <!-- Step 3: Escort scope -->
+        <section class="form-step stack-lg" data-step="3" aria-labelledby="heading-3" hidden>
+          <h1 class="h3 step-heading" id="heading-3" tabindex="-1">Escort scope</h1>
+          <fieldset class="radio-group" id="field-escort" aria-labelledby="heading-3" aria-describedby="escort-error">
+            <label class="radio-card">
+              <input class="radio-card__input" type="radio" name="escort_scope" value="full">
+              <span><span class="radio-card__title">Full</span><span class="radio-card__text">Escort to the gate</span></span>
+            </label>
+            <label class="radio-card">
+              <input class="radio-card__input" type="radio" name="escort_scope" value="partial">
+              <span><span class="radio-card__title">Partial</span><span class="radio-card__text">Escort through security</span></span>
+            </label>
+          </fieldset>
+          <p class="field__error" id="escort-error" hidden></p>
+        </section>
+
+        <!-- Step 4: Your details -->
+        <section class="form-step stack-lg" data-step="4" aria-labelledby="heading-4" hidden>
+          <h1 class="h3 step-heading" id="heading-4" tabindex="-1">Your details</h1>
+          <div class="field" id="field-full-name">
+            <label class="field__label" for="full-name">Full name</label>
+            <input class="input" id="full-name" type="text" maxlength="80" autocomplete="name"
+                   placeholder="Full name" aria-describedby="full-name-error">
+            <p class="field__error" id="full-name-error" hidden></p>
+          </div>
+          <div class="field" id="field-phone">
+            <label class="field__label" for="phone">Phone</label>
+            <input class="input" id="phone" type="tel" maxlength="20" autocomplete="tel"
+                   placeholder="Phone number" aria-describedby="phone-error">
+            <p class="field__error" id="phone-error" hidden></p>
+          </div>
+          <div class="field" id="field-email">
+            <label class="field__label" for="email">Email</label>
+            <input class="input" id="email" type="email" maxlength="254" autocomplete="email"
+                   placeholder="name@example.com" aria-describedby="email-error">
+            <p class="field__error" id="email-error" hidden></p>
+          </div>
+          <div class="field" id="field-notes">
+            <label class="field__label" for="notes">Notes (optional)</label>
+            <textarea class="textarea" id="notes" maxlength="500" placeholder="Anything we should know"
+                      aria-describedby="notes-error"></textarea>
+            <p class="field__error" id="notes-error" hidden></p>
+          </div>
+
+          <!-- Anti-bot field: hidden from people, left empty by real browsers -->
+          <div class="visually-hidden" aria-hidden="true">
+            <label for="website">Website</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+        </section>
+
+        <div class="form-shell__footer">
+          <p class="alert-error" id="form-error" role="alert" hidden></p>
+          <div class="action-bar">
+            <button class="btn btn-secondary" type="button" id="btn-back" hidden>Back</button>
+            <button class="btn btn-primary" type="submit" id="btn-next">
+              <span id="btn-next-label">Next</span>
+              <svg class="btn__arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <!-- Request received -->
+      <section class="received form-shell" id="received" aria-labelledby="heading-received" hidden>
+        <div class="received__body stack-lg">
+          <svg class="received__icon" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <rect x="1" y="1" width="62" height="62"/><path d="M20 33l8 8 16-17"/>
+          </svg>
+          <h1 class="h3 step-heading" id="heading-received" tabindex="-1">Request received</h1>
+          <p class="text-soft">Your request is awaiting manager review. We will email you the decision.</p>
+          <div class="panel received__reference">
+            <p class="received__reference-label">Reference</p>
+            <p class="received__reference-value" id="received-reference"></p>
+          </div>
+          <div class="panel">
+            <div class="data-row">
+              <div>
+                <p class="data-row__label">Flight</p>
+                <p class="data-row__value" id="received-flight"></p>
+              </div>
+            </div>
+            <div class="data-row">
+              <div>
+                <p class="data-row__label">Status</p>
+                <p class="data-row__value">Awaiting review</p>
+              </div>
+              <span class="tag tag-pending">Pending</span>
+            </div>
+          </div>
+        </div>
+        <div class="form-shell__footer">
+          <div class="action-bar">
+            <a class="btn btn-secondary" href="/">Back to home</a>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</body>
+</html>

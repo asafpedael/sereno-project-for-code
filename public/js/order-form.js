@@ -1,0 +1,385 @@
+// Order form: four steps in one page, then the "Request received" screen.
+// Form values live in the page (the step sections are only hidden), so Back never loses data.
+import { getJson, postJson } from './api.js';
+import { el, clear } from './dom.js';
+import { formatTimeIL, formatDateIL, formatDateTimeIL, isSameDayIL } from './time.js';
+import { meetingTime } from './meeting-time.js';
+
+const STEPS = 4;
+const SEARCH_DELAY_MS = 300;
+const PHONE_RE = /^[0-9+\-() ]{7,20}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)*\.[^\s@.]{2,}$/;
+
+const $ = (id) => document.getElementById(id);
+
+const state = {
+  step: 1,
+  flight: null, // { id, flight_no, airline, destination, departure_at }
+  submitting: false,
+};
+
+const form = $('order-form');
+const searchInput = $('flight-search');
+const resultsBox = $('flight-results');
+const searchStatus = $('flight-status');
+const departureInput = $('departure-time');
+const travelersInput = $('travelers');
+const bagsInput = $('bags');
+const btnBack = $('btn-back');
+const btnNext = $('btn-next');
+const btnNextLabel = $('btn-next-label');
+const formError = $('form-error');
+
+// ---------- Field errors ----------
+
+function showFieldError(fieldId, errorId, inputs, message) {
+  const field = $(fieldId);
+  const error = $(errorId);
+  field.classList.add('is-invalid');
+  error.textContent = message;
+  error.hidden = false;
+  for (const input of inputs) input.setAttribute('aria-invalid', 'true');
+}
+
+function clearFieldError(fieldId, errorId, inputs) {
+  $(fieldId).classList.remove('is-invalid');
+  const error = $(errorId);
+  error.textContent = '';
+  error.hidden = true;
+  for (const input of inputs) input.removeAttribute('aria-invalid');
+}
+
+function showFormError(message) {
+  formError.textContent = message;
+  formError.hidden = false;
+}
+
+function clearFormError() {
+  formError.textContent = '';
+  formError.hidden = true;
+}
+
+// ---------- Step 1: flight search ----------
+
+let searchTimer = null;
+let searchCounter = 0;
+
+function flightLabel(flight) {
+  return `${flight.flight_no} · ${flight.destination}`;
+}
+
+function renderFlights(flights) {
+  clear(resultsBox);
+  for (const flight of flights) {
+    const selected = state.flight && state.flight.id === flight.id;
+    const button = el('button', {
+      className: 'option',
+      attrs: { type: 'button', 'aria-pressed': selected ? 'true' : 'false', 'data-flight-id': flight.id },
+    },
+    el('span', {},
+      el('span', { className: 'option__title' }, flightLabel(flight)),
+      el('span', { className: 'option__sub' }, flight.airline || '')),
+    el('span', { className: 'option__aside' }, formatDateTimeIL(flight.departure_at)));
+    button.addEventListener('click', () => selectFlight(flight));
+    resultsBox.append(button);
+  }
+  resultsBox.hidden = flights.length === 0;
+}
+
+async function searchFlights() {
+  const requestId = ++searchCounter;
+  const text = searchInput.value.trim();
+  searchStatus.textContent = 'Loading flights…';
+  try {
+    const data = await getJson(`/api/flights?q=${encodeURIComponent(text)}`);
+    if (requestId !== searchCounter) return; // a newer search has started
+    renderFlights(data.flights);
+    searchStatus.textContent = data.flights.length === 0
+      ? 'No flights found. Try another flight number or destination.'
+      : '';
+  } catch (err) {
+    if (requestId !== searchCounter) return;
+    renderFlights([]);
+    searchStatus.textContent = 'Could not load flights. Please try again.';
+  }
+}
+
+function selectFlight(flight) {
+  state.flight = flight;
+  departureInput.value = formatDateTimeIL(flight.departure_at);
+  for (const button of resultsBox.querySelectorAll('.option')) {
+    button.setAttribute('aria-pressed', button.dataset.flightId === flight.id ? 'true' : 'false');
+  }
+  clearFieldError('field-flight', 'flight-error', [searchInput]);
+  updateMeetingTime();
+}
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(searchFlights, SEARCH_DELAY_MS);
+});
+// Enter in the search box searches now instead of moving to the next step.
+searchInput.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    clearTimeout(searchTimer);
+    searchFlights();
+  }
+});
+
+// ---------- Step 2: travellers, bags, services, meeting time ----------
+
+const LIMITS = { travelers: { min: 1, max: 10 }, bags: { min: 0, max: 10 } };
+
+// Returns the whole number in the box, or null if it is empty, not whole, or out of range.
+function readCount(name) {
+  const input = $(name);
+  const raw = input.value.trim();
+  if (!/^\d{1,2}$/.test(raw)) return null;
+  const value = Number(raw);
+  const { min, max } = LIMITS[name];
+  return value >= min && value <= max ? value : null;
+}
+
+function updateStepperButtons(name) {
+  const input = $(name);
+  const value = Number(input.value);
+  const { min, max } = LIMITS[name];
+  const [minus, plus] = form.querySelectorAll(`[data-target="${name}"]`);
+  minus.disabled = !(Number.isFinite(value) && value > min);
+  plus.disabled = Number.isFinite(value) && value >= max;
+}
+
+function updateMeetingTime() {
+  const panel = $('meeting-panel');
+  const timeEl = $('meeting-time');
+  const dateEl = $('meeting-date');
+  const travelers = readCount('travelers');
+  const bags = readCount('bags');
+  if (!state.flight || travelers === null || bags === null) {
+    panel.hidden = true;
+    return;
+  }
+  const departure = new Date(state.flight.departure_at);
+  const meeting = meetingTime(departure, travelers, bags);
+  timeEl.textContent = formatTimeIL(meeting);
+  if (isSameDayIL(meeting, departure)) {
+    dateEl.hidden = true;
+    dateEl.textContent = '';
+  } else {
+    dateEl.textContent = `${formatDateIL(meeting)} (day before departure)`;
+    dateEl.hidden = false;
+  }
+  panel.hidden = false;
+}
+
+for (const button of form.querySelectorAll('.stepper__btn')) {
+  button.addEventListener('click', () => {
+    const name = button.dataset.target;
+    const input = $(name);
+    const { min, max } = LIMITS[name];
+    const current = Number.parseInt(input.value, 10);
+    const base = Number.isFinite(current) ? current : min;
+    input.value = String(Math.min(max, Math.max(min, base + Number(button.dataset.delta))));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+for (const name of ['travelers', 'bags']) {
+  $(name).addEventListener('input', () => {
+    updateStepperButtons(name);
+    if (readCount(name) !== null) clearFieldError(`field-${name}`, `${name}-error`, [$(name)]);
+    updateMeetingTime();
+  });
+}
+
+function selectedServices() {
+  return [...form.querySelectorAll('input[name="services"]:checked')].map((input) => input.value);
+}
+
+// ---------- Step 3 and 4 inputs ----------
+
+function selectedEscort() {
+  const checked = form.querySelector('input[name="escort_scope"]:checked');
+  return checked ? checked.value : null;
+}
+
+for (const radio of form.querySelectorAll('input[name="escort_scope"]')) {
+  radio.addEventListener('change', () => clearFieldError('field-escort', 'escort-error', []));
+}
+
+const DETAIL_FIELDS = [
+  ['full-name', 'field-full-name', 'full-name-error'],
+  ['phone', 'field-phone', 'phone-error'],
+  ['email', 'field-email', 'email-error'],
+  ['notes', 'field-notes', 'notes-error'],
+];
+for (const [inputId, fieldId, errorId] of DETAIL_FIELDS) {
+  $(inputId).addEventListener('input', () => clearFieldError(fieldId, errorId, [$(inputId)]));
+}
+
+// ---------- Validation per step (same rules as the server) ----------
+
+function charLength(text) {
+  return Array.from(text).length;
+}
+
+const STEP_FIELDS = {
+  1: [['field-flight', 'flight-error', () => [searchInput]]],
+  2: [['field-travelers', 'travelers-error', () => [travelersInput]], ['field-bags', 'bags-error', () => [bagsInput]]],
+  3: [['field-escort', 'escort-error', () => []]],
+  4: DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
+};
+
+function validateStep(step) {
+  const problems = []; // [focusTarget]
+  // Start clean, so only the current problems are shown.
+  for (const [fieldId, errorId, inputs] of STEP_FIELDS[step]) clearFieldError(fieldId, errorId, inputs());
+
+  if (step === 1 && !state.flight) {
+    showFieldError('field-flight', 'flight-error', [searchInput], 'Please select your flight from the list.');
+    problems.push(searchInput);
+  }
+
+  if (step === 2) {
+    if (readCount('travelers') === null) {
+      showFieldError('field-travelers', 'travelers-error', [travelersInput], 'Enter a whole number from 1 to 10.');
+      problems.push(travelersInput);
+    }
+    if (readCount('bags') === null) {
+      showFieldError('field-bags', 'bags-error', [bagsInput], 'Enter a whole number from 0 to 10.');
+      problems.push(bagsInput);
+    }
+  }
+
+  if (step === 3 && !selectedEscort()) {
+    showFieldError('field-escort', 'escort-error', [], 'Please choose an escort scope.');
+    problems.push(form.querySelector('input[name="escort_scope"]'));
+  }
+
+  if (step === 4) {
+    const name = $('full-name').value.trim();
+    if (charLength(name) < 2 || charLength(name) > 80) {
+      showFieldError('field-full-name', 'full-name-error', [$('full-name')],
+        name ? 'Full name must be 2 to 80 characters.' : 'Please enter your full name.');
+      problems.push($('full-name'));
+    }
+    const phone = $('phone').value.trim();
+    if (!PHONE_RE.test(phone) || (phone.match(/\d/g) || []).length < 7) {
+      showFieldError('field-phone', 'phone-error', [$('phone')],
+        phone ? 'Enter a valid phone number (digits, +, -, spaces).' : 'Please enter your phone number.');
+      problems.push($('phone'));
+    }
+    const email = $('email').value.trim();
+    if (email.length > 254 || !EMAIL_RE.test(email)) {
+      showFieldError('field-email', 'email-error', [$('email')],
+        email ? 'Enter a full email address.' : 'Please enter your email address.');
+      problems.push($('email'));
+    }
+    if (charLength($('notes').value.trim()) > 500) {
+      showFieldError('field-notes', 'notes-error', [$('notes')], 'Notes must be 500 characters or fewer.');
+      problems.push($('notes'));
+    }
+  }
+
+  if (problems.length > 0) {
+    problems[0].focus();
+    return false;
+  }
+  return true;
+}
+
+// ---------- Navigation ----------
+
+function showStep(step, { moveFocus = true } = {}) {
+  state.step = step;
+  for (const section of form.querySelectorAll('.form-step')) {
+    section.hidden = Number(section.dataset.step) !== step;
+  }
+  for (const item of form.querySelectorAll('.progress__step')) {
+    const n = Number(item.dataset.progress);
+    item.classList.toggle('is-done', n < step);
+    item.classList.toggle('is-current', n === step);
+    if (n === step) item.setAttribute('aria-current', 'step');
+    else item.removeAttribute('aria-current');
+  }
+  $('step-counter').textContent = `Step ${step} of ${STEPS}`;
+  btnBack.hidden = step === 1;
+  btnNextLabel.textContent = step === STEPS ? 'Submit request' : 'Next';
+  clearFormError();
+  if (step === 2) updateMeetingTime();
+  if (moveFocus) {
+    window.scrollTo(0, 0);
+    $(`heading-${step}`).focus();
+  }
+}
+
+btnBack.addEventListener('click', () => {
+  if (state.step > 1 && !state.submitting) showStep(state.step - 1);
+});
+
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (state.submitting) return;
+  clearFormError();
+  if (!validateStep(state.step)) return;
+  if (state.step < STEPS) showStep(state.step + 1);
+  else submitOrder();
+});
+
+// ---------- Submit and "Request received" ----------
+
+async function submitOrder() {
+  state.submitting = true;
+  btnNext.disabled = true;
+  btnBack.disabled = true;
+  btnNextLabel.textContent = 'Sending…';
+
+  const payload = {
+    flight_id: state.flight.id,
+    flight_no: state.flight.flight_no,
+    flight_date: null,
+    travelers: readCount('travelers'),
+    bags: readCount('bags'),
+    services: selectedServices(),
+    escort_scope: selectedEscort(),
+    full_name: $('full-name').value.trim(),
+    phone: $('phone').value.trim(),
+    email: $('email').value.trim(),
+    notes: $('notes').value.trim(),
+    website: $('website').value,
+  };
+
+  try {
+    const result = await postJson('/api/submit-order', payload);
+    showReceived(result.reference);
+  } catch (err) {
+    // 429 and 400 carry a plain message from the server; anything else gets a generic one.
+    showFormError(err.message);
+    state.submitting = false;
+    btnNext.disabled = false;
+    btnBack.disabled = false;
+    btnNextLabel.textContent = 'Submit request';
+  }
+}
+
+function showReceived(reference) {
+  const flight = state.flight;
+  $('received-reference').textContent = reference;
+  $('received-flight').textContent = `${flightLabel(flight)} · ${formatDateTimeIL(flight.departure_at)}`;
+  form.hidden = true;
+  form.reset();
+  state.flight = null;
+  $('step-counter').hidden = true;
+  $('received').hidden = false;
+  document.title = 'Request received · Sereno';
+  window.scrollTo(0, 0);
+  $('heading-received').focus();
+}
+
+// ---------- Start ----------
+
+showStep(1, { moveFocus: false });
+updateStepperButtons('travelers');
+updateStepperButtons('bags');
+searchFlights();

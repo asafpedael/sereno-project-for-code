@@ -1,0 +1,86 @@
+/* Sereno design tokens (DESIGN.md, Part 2: Style Guide). */
+
+@font-face {
+  font-family: 'Frank Ruhl Libre';
+  font-style: normal;
+  font-weight: 300 900;
+  font-display: swap;
+  src: url('/assets/fonts/frank-ruhl-libre-latin.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Assistant';
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url('/assets/fonts/assistant-latin.woff2') format('woff2');
+}
+
+:root {
+  /* Colors: 60% cream/paper, 30% navy, 10% gold */
+  --color-cream: #F6F1E8;
+  --color-paper: #FBF8F2;
+  --color-navy: #22344A;
+  --color-deep-navy: #0F1620;
+  --color-gold: #CF9A53;
+  --color-gold-hover: #DDAA63;
+  --color-gold-dark: #B37F3C;      /* lines and focus ring only, never text */
+  --color-ink-soft: #4A5868;
+  --color-on-dark-soft: #B9C2CD;
+  --color-rule-light: rgba(34, 52, 74, 0.22);
+  --color-rule-dark: rgba(246, 241, 232, 0.20);
+  --color-success: #2E6B4D;
+  --color-success-tint: #E3EEE6;
+  --color-error: #9C3B2A;
+  --color-error-tint: #F3E1DC;
+
+  /* Fonts */
+  --font-heading: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
+  --font-body: 'Assistant', 'Segoe UI', Arial, sans-serif;
+
+  /* Font sizes (phone first; larger screens override below) */
+  --fs-h1: 40px;
+  --fs-h2: 32px;
+  --fs-h3: 28px;
+  --fs-brand: 22px;
+  --fs-lead: 18px;
+  --fs-body: 16px;
+  --fs-button: 17px;
+  --fs-nav: 16px;
+  --fs-label: 15.5px;
+  --fs-small: 14.5px;
+  --fs-tag: 13px;
+  --fs-time: 40px;
+
+  /* Spacing (8px base) */
+  --space-1: 8px;
+  --space-2: 16px;
+  --space-3: 24px;
+  --space-4: 32px;
+  --space-5: 40px;
+  --space-6: 72px;
+  --gutter: 20px;
+
+  /* Shapes and sizes */
+  --radius: 2px;
+  --control-height: 54px;
+  --control-height-small: 46px;
+  --rule-width: 1px;
+  --focus-ring: 2px solid var(--color-gold-dark);
+  --focus-offset: 3px;
+  --content-narrow: 560px;
+  --content-wide: 1240px;
+}
+
+@media (min-width: 768px) {
+  :root {
+    --fs-h1: 76px;
+    --fs-h2: 52px;
+    --fs-h3: 34px;
+    --fs-brand: 26px;
+    --fs-lead: 20px;
+    --fs-body: 18px;
+    --fs-time: 48px;
+    --gutter: 40px;
+  }
+}

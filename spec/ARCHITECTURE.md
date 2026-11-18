@@ -837,6 +837,7 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** ARCHITECTURE §9 point 1: it is not yet known whether Vercel bundles a file from `public/` into a function that imports it.
 **Decision:** Keep `public/js/meeting-time.js` as the single source of the formula for now. In M1 it is used only by the seed-time script; no function imports it yet. `outputDirectory: "public"` with `framework: null` is confirmed working.
 **Consequences:** Bundling must be checked on the first deploy of M2 (when `api/submit-order.js` imports it). If it is not bundled, move it to `lib/` and serve a copy via `data/`, as §7 already allows.
+**M2 update:** `api/submit-order.js` imports `../public/js/meeting-time.js`, and the browser loads `/js/meeting-time.js`; both work in `vercel dev`. The production check is still open until the first deploy after the M2 push.
 
 ### ADR-5: The n8n export in the repo holds placeholders only
 **Context:** The repository is public, and the workflow contains test inbox addresses, the sender address and credentials.
@@ -847,3 +848,18 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** For this project (no framework) `vercel dev` loaded the Config values from the Vercel Development environment but did not load the secrets from `.env.local`. Also, `vercel link` overwrote `.env.local` once. On Windows, `vercel dev` needs Developer Mode (it creates symlinks).
 **Decision:** Start the local server through Node with the env file: `node --env-file=.env.local <vercel CLI>/dist/vc.js dev --listen 3000`. Never run `vercel link` / `vercel env pull` into `.env.local`.
 **Consequences:** Secrets stay only in `.env.local` (Development secrets are not stored in Vercel). The run command is longer and depends on the global Vercel CLI path; it is recorded in CLAUDE.md.
+
+### ADR-7: Order rate limits are enforced inside one database function
+**Context:** Decision 12 counts orders with a query and then inserts. In M2 testing, 6 submissions with the same email sent at the same moment were all saved, because each counted before the others were stored; the same gap applies to the 30-per-hour limit. The stack says actions that can happen at the same moment are written as a database function called through `rpc`.
+**Decision:** `api/submit-order.js` inserts through `public.insert_order_with_limits` in `supabase/migrations/002_functions.sql` (created in M2; M3 adds `decide_order` etc. to the same file). The function takes a transaction-level advisory lock, counts the last hour's orders (system-wide and for the customer), and inserts only if both are under the limits; zero rows returned means `429`. The code also keeps a quick count before the customer lookup, so most excess requests stop early without creating customer rows.
+**Consequences:** All public submissions wait for each other for a few milliseconds (fine at this volume). The limits hold under parallel requests. `002_functions.sql` uses `create or replace` so it can be re-run when M3 adds functions. A new email that hits the limit in the race may still leave a customer row without orders (harmless; no data of other customers changes).
+
+### ADR-8: Self-hosted web fonts
+**Context:** The style guide uses Frank Ruhl Libre and Assistant. Loading them from Google Fonts would make every visitor's browser contact Google.
+**Decision:** The latin subset of each font (one variable woff2 file per family, SIL Open Font License) is stored in `public/assets/fonts/` and declared with `@font-face` in `public/css/tokens.css`, with serif / sans-serif fallbacks. Source and license are noted in `public/assets/fonts/README.md`.
+**Consequences:** No third-party request for fonts; about 66 KB served from the site. Hebrew letters are not included (the interface is English); add the Hebrew subset if Hebrew text is ever shown.
+
+### ADR-9: Shared browser helpers for time and validation
+**Context:** Every screen shows dates and times in Israel time, and the order form must show the same validation messages the server enforces.
+**Decision:** `public/js/time.js` formats all dates and times with `Asia/Jerusalem` (used by the form now, staff screens later). The form repeats the server's validation rules (ranges, phone and email patterns, lengths) for instant messages; the server (`lib/validate.js`) stays the authority and re-checks everything.
+**Consequences:** The phone and email patterns exist in two places (`lib/validate.js` and `public/js/order-form.js`); a change to a rule must be made in both.
