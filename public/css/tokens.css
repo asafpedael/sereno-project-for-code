@@ -4,7 +4,7 @@
   font-family: 'Frank Ruhl Libre';
   font-style: normal;
   font-weight: 300 900;
-  font-display: swap;
+  font-display: block; /* self-hosted and preloaded: wait briefly instead of swapping fonts (no jump) */
   src: url('/assets/fonts/frank-ruhl-libre-latin.woff2') format('woff2');
 }
 
@@ -12,7 +12,7 @@
   font-family: 'Assistant';
   font-style: normal;
   font-weight: 200 800;
-  font-display: swap;
+  font-display: block; /* self-hosted and preloaded: wait briefly instead of swapping fonts (no jump) */
   src: url('/assets/fonts/assistant-latin.woff2') format('woff2');
 }
 

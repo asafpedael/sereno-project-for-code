@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Approvals · Sereno</title>
+  <link rel="preload" href="/assets/fonts/assistant-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/staff.css">
+  <script type="module" src="/js/manager.js"></script>
+</head>
+<body>
+  <header class="site-header staff-header">
+    <div class="site-header__inner site-header__inner--wide">
+      <div class="staff-header__left">
+        <span class="brand">Sereno</span>
+        <nav class="tabs" aria-label="Staff sections">
+          <a class="tab" href="/staff/manager.html" aria-current="page">Approvals</a>
+        </nav>
+      </div>
+      <div class="staff-header__right">
+        <span class="staff-role">Manager</span>
+        <button class="btn btn-small btn-on-dark" id="logout" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="approvals">
+    <div class="approvals__head">
+      <div>
+        <h1 class="h3">Orders awaiting decision</h1>
+        <p class="approvals__status text-small" id="status-line" role="status"></p>
+      </div>
+      <button class="btn btn-small btn-secondary" id="refresh" type="button">Refresh</button>
+    </div>
+
+    <div class="approvals__body">
+      <section class="approvals__list" aria-labelledby="list-heading">
+        <h2 class="visually-hidden" id="list-heading">Orders</h2>
+        <p class="alert-error approvals__message" id="list-error" role="alert" hidden></p>
+        <p class="text-soft approvals__message" id="list-empty" hidden>No orders are waiting for a decision.</p>
+        <p class="text-soft approvals__message" id="list-loading">Loading orders…</p>
+        <ul class="order-list" id="order-list"></ul>
+      </section>
+
+      <section class="approvals__details" id="details" aria-live="polite" hidden></section>
+    </div>
+  </main>
+</body>
+</html>

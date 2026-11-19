@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Staff sign in · Sereno</title>
+  <link rel="preload" href="/assets/fonts/assistant-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/staff.css">
+  <script type="module" src="/js/login.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <span class="brand">Sereno</span>
+    </div>
+  </header>
+
+  <main class="page">
+    <div class="container-narrow login">
+      <form id="login-form" class="stack-lg" novalidate>
+        <h1 class="h3">Staff sign in</h1>
+
+        <div class="field" id="field-email">
+          <label class="field__label" for="login-email">Email</label>
+          <input class="input" id="login-email" type="email" autocomplete="username" maxlength="254"
+                 aria-describedby="email-error" required>
+          <p class="field__error" id="email-error" hidden></p>
+        </div>
+
+        <div class="field" id="field-password">
+          <label class="field__label" for="login-password">Password</label>
+          <input class="input" id="login-password" type="password" autocomplete="current-password" maxlength="200"
+                 aria-describedby="password-error" required>
+          <p class="field__error" id="password-error" hidden></p>
+        </div>
+
+        <div class="stack">
+          <p class="alert-error" id="login-error" role="alert" hidden></p>
+          <button class="btn btn-primary btn-block" id="login-submit" type="submit">Sign in</button>
+        </div>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

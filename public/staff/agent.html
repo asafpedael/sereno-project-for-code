@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Approved orders · Sereno</title>
+  <link rel="preload" href="/assets/fonts/assistant-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/staff.css">
+  <!-- M3 placeholder: the field agent screen is built in Milestone 4. -->
+  <script type="module">
+    import { requireRole, bindLogout } from '/js/session.js';
+    if (requireRole('agent')) bindLogout(document.getElementById('logout'));
+  </script>
+</head>
+<body>
+  <header class="site-header staff-header">
+    <div class="site-header__inner">
+      <span class="brand">Sereno</span>
+      <div class="staff-header__right">
+        <span class="staff-role">Field agent</span>
+        <button class="btn btn-small btn-on-dark" id="logout" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="staff-main stack">
+    <h1 class="h3">Approved orders</h1>
+    <p class="text-soft">Approved orders will appear here.</p>
+  </main>
+</body>
+</html>

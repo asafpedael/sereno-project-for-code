@@ -201,7 +201,7 @@
             {
               "id": "5e7e0000-0000-4000-8000-000000000014",
               "name": "text",
-              "value": "=New order {{ $json.body.reference }} from {{ $json.body.customer_name }}.\nFlight: {{ $json.body.flight_no }} to {{ $json.body.destination }}, {{ $json.body.departure_local }}.\nOpen the manager dashboard to review it.",
+              "value": "=New order {{ $json.body.reference }} from {{ $json.body.customer_name }}.\nFlight: {{ $json.body.flight_no }} to {{ $json.body.destination }}, {{ $json.body.departure_local }}.\nTravellers: {{ $json.body.travelers }}, bags: {{ $json.body.bags }}.\nSuggested meeting time: {{ $json.body.meeting_time_local }}.\nOpen the manager dashboard to review it.",
               "type": "string"
             },
             {

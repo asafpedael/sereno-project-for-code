@@ -104,17 +104,28 @@ async function searchFlights() {
   }
 }
 
+// Choosing a flight closes the list and shows the choice in the search box.
+// Typing in the box again reopens the list (and clears the choice).
 function selectFlight(flight) {
   state.flight = flight;
   departureInput.value = formatDateTimeIL(flight.departure_at);
-  for (const button of resultsBox.querySelectorAll('.option')) {
-    button.setAttribute('aria-pressed', button.dataset.flightId === flight.id ? 'true' : 'false');
-  }
+  searchInput.value = `${flightLabel(flight)} · ${formatDateIL(flight.departure_at)}`;
+  searchCounter++; // ignore any search still on its way
+  clearTimeout(searchTimer);
+  resultsBox.hidden = true;
+  searchStatus.textContent = `Selected: ${flightLabel(flight)}, ${formatDateTimeIL(flight.departure_at)}.`;
   clearFieldError('field-flight', 'flight-error', [searchInput]);
   updateMeetingTime();
 }
 
+function clearSelectedFlight() {
+  state.flight = null;
+  departureInput.value = '';
+  updateMeetingTime();
+}
+
 searchInput.addEventListener('input', () => {
+  if (state.flight) clearSelectedFlight();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(searchFlights, SEARCH_DELAY_MS);
 });
@@ -122,6 +133,7 @@ searchInput.addEventListener('input', () => {
 searchInput.addEventListener('keydown', (event) => {
   if (event.key === 'Enter') {
     event.preventDefault();
+    if (state.flight) return; // a flight is chosen; Enter does nothing until the text changes
     clearTimeout(searchTimer);
     searchFlights();
   }

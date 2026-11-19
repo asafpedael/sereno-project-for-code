@@ -1,0 +1,116 @@
+/* Sereno staff screens (login, manager, agent). Requires tokens.css and base.css. */
+
+/* ---------- Staff header: brand, tabs, role, log out ---------- */
+.staff-header .site-header__inner { gap: var(--space-3); }
+.staff-header__left { display: flex; align-items: stretch; gap: var(--space-4); align-self: stretch; }
+.staff-header__left .brand { align-self: center; }
+.staff-header__right { display: flex; align-items: center; gap: var(--space-2); }
+.staff-role { font-size: var(--fs-small); font-weight: 600; color: var(--color-cream); }
+.staff-header .btn { white-space: nowrap; }
+@media (max-width: 480px) {
+  .staff-header .site-header__inner { gap: var(--space-1); }
+  .staff-header__left { gap: var(--space-2); }
+  .staff-header__right { gap: var(--space-1); }
+}
+
+.tabs { display: flex; gap: var(--space-3); }
+.tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 var(--space-1);
+  border-bottom: 2px solid transparent;
+  color: var(--color-on-dark-soft);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: none;
+}
+.tab:hover { color: var(--color-cream); }
+.tab[aria-current="page"] { color: var(--color-cream); border-bottom-color: var(--color-gold); }
+
+/* ---------- Login ---------- */
+.login { padding-top: var(--space-5); }
+
+/* Staff screens use the full width (the header lines up with the two-column body). */
+.site-header__inner--wide { max-width: none; }
+
+/* ---------- Manager approvals: list and details side by side ---------- */
+.approvals { flex: 1; display: flex; flex-direction: column; }
+.approvals__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--gutter);
+  border-bottom: var(--rule-width) solid var(--color-rule-light);
+}
+.approvals__status { color: var(--color-success); font-weight: 600; min-height: 1.4em; }
+.approvals__status.is-error { color: var(--color-error); }
+.approvals__body { flex: 1; display: grid; grid-template-columns: 1fr; }
+.approvals__list { border-bottom: var(--rule-width) solid var(--color-rule-light); }
+.approvals__message { margin: var(--space-2) var(--gutter); }
+.approvals__details { padding: var(--space-3) var(--gutter) var(--space-4); }
+
+@media (min-width: 900px) {
+  .approvals__body { grid-template-columns: minmax(280px, 1fr) 2fr; }
+  .approvals__list { border-bottom: 0; border-right: var(--rule-width) solid var(--color-rule-light); }
+  .approvals__details { padding: var(--space-3) var(--space-4) var(--space-4); }
+}
+
+/* Order list (left column) */
+.order-list { margin: 0; }
+.order-item {
+  display: block;
+  width: 100%;
+  padding: 14px var(--gutter);
+  background: transparent;
+  border: 0;
+  border-left: 3px solid transparent;
+  border-bottom: var(--rule-width) solid var(--color-rule-light);
+  text-align: left;
+  cursor: pointer;
+}
+.order-item:hover { background: var(--color-paper); }
+.order-item[aria-pressed="true"] { border-left-color: var(--color-gold); background: var(--color-paper); }
+.order-item__title { display: block; font-weight: 700; font-size: var(--fs-small); color: var(--color-navy); }
+.order-item__sub { display: block; font-size: 13px; color: var(--color-ink-soft); margin-bottom: 6px; }
+.order-item__tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+/* Order details (right column) */
+.details__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.details-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2) var(--space-4);
+  margin-top: var(--space-3);
+}
+@media (min-width: 640px) { .details-grid { grid-template-columns: 1fr 1fr; } }
+.details-grid__label { display: block; font-size: var(--fs-tag); color: var(--color-ink-soft); }
+.details-grid__value { display: block; font-weight: 700; font-size: var(--fs-small); overflow-wrap: anywhere; }
+
+.details-panels {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+@media (min-width: 640px) { .details-panels { grid-template-columns: 1fr 1fr; } }
+.panel__title { font-size: var(--fs-tag); font-weight: 700; }
+.panel__text { font-size: var(--fs-small); white-space: pre-line; overflow-wrap: anywhere; }
+
+/* Decision area: meeting time, then Reject / Approve at the bottom right */
+.decision { margin-top: var(--space-3); display: flex; flex-direction: column; gap: var(--space-3); }
+.meeting-field { max-width: 360px; }
+.meeting-field__inputs { display: grid; grid-template-columns: 1.4fr 1fr; gap: var(--space-1); }
+.meeting-field.is-invalid .input { border: 2px solid var(--color-error); }
+.decision__actions { display: flex; flex-direction: column; gap: var(--space-2); }
+.decision__buttons { display: flex; justify-content: flex-end; gap: 12px; }
+.decision__buttons .btn { min-width: 120px; }
+@media (max-width: 480px) { .decision__buttons .btn { flex: 1; min-width: 0; } }
+
+/* ---------- Simple staff page body ---------- */
+.staff-main {
+  width: 100%;
+  max-width: var(--content-wide);
+  margin: 0 auto;
+  padding: var(--space-3) var(--gutter);
+}

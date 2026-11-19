@@ -30,14 +30,21 @@ async function request(path, options) {
   return body.data;
 }
 
-export function getJson(path) {
-  return request(path, { headers: { Accept: 'application/json' } });
+// token (optional): a staff access token, sent as "Authorization: Bearer <token>".
+function headers(extra, token) {
+  const result = { Accept: 'application/json', ...extra };
+  if (token) result.Authorization = `Bearer ${token}`;
+  return result;
 }
 
-export function postJson(path, data) {
+export function getJson(path, token) {
+  return request(path, { headers: headers({}, token) });
+}
+
+export function postJson(path, data, token) {
   return request(path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: headers({ 'Content-Type': 'application/json' }, token),
     body: JSON.stringify(data),
   });
 }

@@ -626,7 +626,7 @@ Webhook sereno + Webhook sereno-dev (POST, Header Auth, סוד נפרד לכל �
 ```
 
 - **Webhook:** שני צמתים, `sereno` (לאתר החי) ו-`sereno-dev` (להרצה מקומית), כל אחד עם Credentials משלו של Header auth, ושניהם מחוברים לאותו Switch (החלטה 20). כתובות Production (אחרי פרסום התהליך), שיטת POST, מצב תגובה "Immediately".
-- **תבניות:** טקסט קבוע באנגלית בצמתי Set. במייל האישור: פרטי הטיסה, שעת המפגש, מספר נוסעים ומזוודות, שירותים, היקף ליווי, וה-`ai_paragraph` אם קיים. מייל דחייה: הודעה על הדחייה. מייל בירור: בקשה לאמת מחדש מספר טיסה ותאריך, עם הפסקה או פסקה קבועה אם ה-AI נכשל. מייל עדכון: השעה הקודמת והחדשה.
+- **תבניות:** טקסט קבוע באנגלית בצמתי Set. מ-Milestone 4 המיילים נשלחים כ-HTML מעוצב לפי `DESIGN.md` ("מיילים"), עם גרסת טקסט פשוט (החלטה של אסף, 18.11.2026). במייל האישור: פרטי הטיסה, שעת המפגש, מספר נוסעים ומזוודות, שירותים, היקף ליווי, וה-`ai_paragraph` אם קיים. מייל דחייה: הודעה על הדחייה. מייל בירור: בקשה לאמת מחדש מספר טיסה ותאריך, עם הפסקה או פסקה קבועה אם ה-AI נכשל. מייל עדכון: השעה הקודמת והחדשה.
 - **Allowlist (חוק הסטאק "רק לכתובות בדיקה"):** צומת Code עם רשימת כתובות הבדיקה. כתובת שלא ברשימה לא מקבלת מייל, והתהליך רושם זאת. כתובת מנהל ההתראות מוגדרת בצומת של `manager_alert`.
 - **שליחה:** צומת Send Email עם Credentials של Gmail SMTP (`smtp.gmail.com`, פורט 465 או 587, סיסמת אפליקציה). הסיסמה נשמרת ב-Credentials של n8n בלבד.
 - **אירוח:** n8n Cloud בתוכנית Starter בתשלום (החלטה 16).
@@ -863,3 +863,18 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Every screen shows dates and times in Israel time, and the order form must show the same validation messages the server enforces.
 **Decision:** `public/js/time.js` formats all dates and times with `Asia/Jerusalem` (used by the form now, staff screens later). The form repeats the server's validation rules (ranges, phone and email patterns, lengths) for instant messages; the server (`lib/validate.js`) stays the authority and re-checks everything.
 **Consequences:** The phone and email patterns exist in two places (`lib/validate.js` and `public/js/order-form.js`); a change to a rule must be made in both.
+
+### ADR-10: Staff sign-in and session
+**Context:** ARCHITECTURE §3 and §9 point 2 left open the exact sign-in call, how roles are set, and how the page keeps the session.
+**Decision:** `staff/login.html` calls `POST {SUPABASE_URL}/auth/v1/token?grant_type=password` with the publishable key in the `apikey` header (never as `Bearer`). Verified in M3: the `sb_publishable_` key is accepted; a wrong email or password answers `400 invalid_credentials` (shown as "Incorrect email or password"), a bad key answers `401`. The page stores `{ access_token, expires_at, role, email }` in `sessionStorage` (`sereno_session`); the stored role only chooses the page. The server (`lib/auth.js`) verifies every call with `auth.getUser(token)` and reads the role from `app_metadata` only. A session past `expires_at`, or any `401` from the API, clears the session and opens the login page. Roles are set once per user in the SQL Editor (`raw_app_meta_data || '{"role":"manager"}'`), because the dashboard has no editor for `app_metadata`; sign-up is turned off in Authentication → Sign In / Providers.
+**Consequences:** No Supabase library in the browser and no token refresh: after about an hour staff sign in again. A role change takes effect at the next sign-in.
+
+### ADR-11: Approving uses the flight's current departure
+**Context:** FR-42 and decision 14: the manager must always approve a meeting time that matches the current flight time, even if the flight changes while the screen is open.
+**Decision:** `api/order-decision.js` reads the flight at the moment of approval and recomputes `recommended_time` with `meeting-time.js`. The page sends `final_time` only when the manager changed the date or time; otherwise the recomputed time is saved. `final_time` must be earlier than that departure (`400` "Meeting time must be before departure"). `decide_order` (`002_functions.sql`) also refuses to approve an order with no flight (`p_to <> 'approved' or flight_id is not null`), in addition to the API check.
+**Consequences:** A manager who approves without editing the time while a flight change is still on its way to the screen gets the correct, new time saved (verified in M3). An edited time is checked against the current departure, not the one on screen.
+
+### ADR-12: Milestone 3 scope of the staff APIs
+**Context:** The full API in §5.1 serves milestones 3–7; M3 builds only the manager's approve/reject flow.
+**Decision:** In M3 `GET /api/orders` is manager-only (`view=inbox` with `pending` orders, soonest departure first, and `id=`); an agent gets `403`. `POST /api/order-decision` accepts only `approve` and `reject` from a manager; other actions answer `400 "Unknown action."` and an agent gets `403`. The order view also returns `customer_notes` (shown in the "Customer notes" panel), which the §5.1 example omits. `submit-order` sends `manager_alert` to n8n after the insert, with `meeting_time_local` (the recommended time).
+**Consequences:** M4 adds `view=approved`, the agent's restricted view and `complete`; M5 adds `needs_clarification` and flight-change orders to the inbox with their actions; M6 adds notes, returning customer and history. Each widens these checks rather than replacing them.

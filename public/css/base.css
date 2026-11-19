@@ -2,7 +2,12 @@
 
 /* ---------- Reset ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Keep the scrollbar's space even when a page is short, so content does not shift
+     sideways when the page grows or shrinks (search results, form steps, staff lists). */
+  scrollbar-gutter: stable;
+}
 body, h1, h2, h3, h4, p, ul, ol, fieldset, legend, dl, dd { margin: 0; padding: 0; }
 fieldset { border: 0; min-width: 0; }
 ul, ol { list-style: none; }
@@ -166,6 +171,8 @@ a:hover { color: var(--color-deep-navy); }
 }
 .field__error::before { content: "\00D7"; font-weight: 700; }
 .field__hint { font-size: var(--fs-small); color: var(--color-ink-soft); }
+/* Live status lines keep one line of space, so text appearing/disappearing does not move the page. */
+.field__hint[role="status"] { min-height: 1.5em; }
 
 /* Number stepper: − n + */
 .stepper { display: inline-grid; grid-template-columns: var(--control-height) 72px var(--control-height); }

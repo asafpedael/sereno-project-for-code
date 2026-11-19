@@ -5,6 +5,12 @@ import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
+import { notify } from '../lib/notify.js';
+import { formatLocalIL } from '../lib/time.js';
+import lists from '../data/lists.json' with { type: 'json' };
+
+const SERVICE_LABELS = Object.fromEntries(lists.services.map((s) => [s.code, s.label]));
+const ESCORT_LABELS = Object.fromEntries(lists.escort_scopes.map((s) => [s.code, s.label]));
 
 const HOUR_MS = 60 * 60 * 1000;
 const MAX_ORDERS_PER_EMAIL_PER_HOUR = 3;
@@ -87,7 +93,7 @@ export default withHandler(['POST'], async (req, res) => {
   // 4. Flight: must exist and must not have departed
   const { data: flight, error: flightError } = await getSupabase()
     .from('flights')
-    .select('id, flight_no, departure_at')
+    .select('id, flight_no, destination, departure_at')
     .eq('id', order.flight_id)
     .maybeSingle();
   if (flightError) throw flightError;
@@ -125,8 +131,25 @@ export default withHandler(['POST'], async (req, res) => {
   }
   const saved = rows[0];
 
-  // 8. manager_alert (M3) and AI order_draft (M4) are added in later milestones.
+  const reference = saved.id.slice(0, 8).toUpperCase();
+
+  // 8. (M4: AI order_draft goes here.) Alert the manager through n8n (FR-14). The order is
+  //    already saved, so a failed alert is only logged and the customer still gets success.
+  await notify({
+    type: 'manager_alert',
+    reference,
+    customer_name: order.full_name,
+    flight_no: flight.flight_no,
+    destination: flight.destination,
+    departure_local: formatLocalIL(departure),
+    meeting_time_local: formatLocalIL(recommended),
+    travelers: order.travelers,
+    bags: order.bags,
+    services: order.services.map((code) => SERVICE_LABELS[code] || code),
+    escort_scope: ESCORT_LABELS[order.escort_scope] || order.escort_scope,
+    needs_clarification: false,
+  });
 
   // 9. Reply: reference and status only
-  sendOk(res, { reference: saved.id.slice(0, 8).toUpperCase(), status: 'pending' });
+  sendOk(res, { reference, status: 'pending' });
 });

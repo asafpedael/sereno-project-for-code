@@ -56,3 +56,38 @@ revoke execute on function public.insert_order_with_limits(
 grant execute on function public.insert_order_with_limits(
   uuid, uuid, text, text, text, integer, integer, jsonb, text, text, timestamptz, integer, integer
 ) to service_role;
+
+-- Records the manager's decision on an order in one conditional update (approve or reject).
+-- Approving also requires a flight (orders without one cannot be approved).
+-- Returns the updated row, or zero rows when the order is no longer in an allowed status
+-- (already decided, or decided by someone else at the same moment): the API answers 409.
+create or replace function public.decide_order(
+  p_order_id uuid,
+  p_from text[],
+  p_to text,
+  p_final_time timestamptz,
+  p_notes text,
+  p_departure timestamptz,
+  p_recommended timestamptz
+) returns setof public.orders
+language sql security invoker set search_path = ''
+as $$
+  update public.orders
+     set status = p_to,
+         final_time = p_final_time,
+         recommended_time = coalesce(p_recommended, recommended_time),
+         manager_notes = coalesce(p_notes, manager_notes),
+         approved_departure_at = p_departure,
+         decided_at = pg_catalog.now()
+   where id = p_order_id
+     and status = any (p_from)
+     and (p_to <> 'approved' or flight_id is not null)
+  returning *;
+$$;
+
+revoke execute on function public.decide_order(
+  uuid, text[], text, timestamptz, text, timestamptz, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.decide_order(
+  uuid, text[], text, timestamptz, text, timestamptz, timestamptz
+) to service_role;
