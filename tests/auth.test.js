@@ -1,7 +1,7 @@
 // Tests for the pure parts of lib/auth.js. Run: node --test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { roleFromUser, bearerToken } from '../lib/auth.js';
+import { roleFromUser, bearerToken, roleMayDecide } from '../lib/auth.js';
 
 test('role is read from app_metadata only', () => {
   assert.equal(roleFromUser({ app_metadata: { role: 'manager' } }), 'manager');
@@ -27,4 +27,15 @@ test('bearer token is read only from a well-formed Authorization header', () => 
   assert.equal(bearerToken({ headers: { authorization: 'Bearer short' } }), null);
   assert.equal(bearerToken({ headers: { authorization: `Bearer ${token} extra` } }), null);
   assert.equal(bearerToken({ headers: { authorization: `Basic ${token}` } }), null);
+});
+
+test('order decisions: the agent may only complete, the manager everything but complete', () => {
+  assert.equal(roleMayDecide('agent', 'complete'), true);
+  for (const action of ['approve', 'reject', 'add_note', undefined, '']) {
+    assert.equal(roleMayDecide('agent', action), false);
+  }
+  assert.equal(roleMayDecide('manager', 'complete'), false);
+  assert.equal(roleMayDecide('manager', 'approve'), true);
+  assert.equal(roleMayDecide('manager', 'reject'), true);
+  assert.equal(roleMayDecide(null, 'approve'), false);
 });

@@ -34,7 +34,7 @@
 | 17 | פרטי קשר בהזמנה | השם והטלפון שהוקלדו נשמרים בכל הזמנה (`contact_name`, `contact_phone`). שליחת טופס עם מייל של לקוח קיים **לא** משנה את שורת הלקוח, כי הטופס פתוח לכולם ואסור שזר ישנה פרטים שהנציג רואה בהזמנות אחרות. כל המסכים, המיילים וה-AI משתמשים בפרטים שבהזמנה |
 | 18 | תאריכים בנתוני הדמה | כל התאריכים בנתוני הדמה (טיסות, יצירת לקוחות והזמנות, החלטות, שעות מפגש ושעת ההמראה בעת האישור) זזים יחד באותו הפרש, כך ש-10.12.2026 באקסל הוא היום שבו מריצים את הייבוא |
 | 19 | בדיקות קוד | הכלי המובנה של Node (`node --test`), בלי ספרייה נוספת. קבצי הבדיקה בתיקייה `tests/` |
-| 20 | הרצה מקומית | פרויקט Supabase אחד, בלי מסד נתונים נפרד לפיתוח (נתוני דמה בלבד). להרצה המקומית מפתחות נפרדים: מפתח סודי נוסף של אותו פרויקט Supabase, מפתח Gemini נפרד, וסוד Webhook נפרד ל-n8n. ב-n8n יש שני צומתי Webhook (`sereno` ו-`sereno-dev`), כל אחד עם סוד משלו, ושניהם מובילים לאותו תהליך. `N8N_WEBHOOK_URL` בסביבת Development של Vercel מצביע על `sereno-dev` |
+| 20 | הרצה מקומית | פרויקט Supabase אחד, בלי מסד נתונים נפרד לפיתוח (נתוני דמה בלבד). להרצה המקומית מפתחות נפרדים: מפתח סודי נוסף של אותו פרויקט Supabase, מפתח OpenAI נפרד, וסוד Webhook נפרד ל-n8n. ב-n8n יש שני צומתי Webhook (`sereno` ו-`sereno-dev`), כל אחד עם סוד משלו, ושניהם מובילים לאותו תהליך. `N8N_WEBHOOK_URL` בסביבת Development של Vercel מצביע על `sereno-dev` |
 
 ---
 
@@ -51,11 +51,11 @@
  └──────────────────────────────────────────┘
     │ מפתח סודי          │ מפתח סודי        │ סוד Webhook
     ▼                    ▼                  ▼
- שכבה 3: Supabase     Gemini API        n8n (Cloud)
+ שכבה 3: Supabase     OpenAI API        n8n (Cloud)
  (Postgres + Auth)    (מודל Flash)      └─► Gmail SMTP ─► מיילים
 ```
 
-הדפדפן פונה **רק** לכתובות ה-`/api` של האתר, ולכתובת ההתחברות של Supabase (לכניסת צוות בלבד, ראו סעיף 3). הוא לא פונה לטבלאות, ל-Gemini או ל-n8n.
+הדפדפן פונה **רק** לכתובות ה-`/api` של האתר, ולכתובת ההתחברות של Supabase (לכניסת צוות בלבד, ראו סעיף 3). הוא לא פונה לטבלאות, ל-OpenAI או ל-n8n.
 
 ### שכבה 1: צד לקוח (אתר סטטי)
 
@@ -115,7 +115,7 @@ Postgres ו-Supabase Auth, ורק הפונקציות ניגשות אליו, עם
 
 ### רכיבים חיצוניים לשכבות
 
-- **Gemini API** נקרא רק מפונקציה (סעיף 4).
+- **OpenAI API** נקרא רק מפונקציה (סעיף 4).
 - **n8n** מקבל Webhook מהפונקציות ושולח מיילים דרך Gmail SMTP (סעיף 5). n8n לא ניגש ל-Supabase: כל הנתונים שהוא צריך מגיעים בגוף ה-Webhook.
 
 ---
@@ -389,9 +389,9 @@ $$;
 ### עקרונות
 
 - המודל נקרא **רק** מפונקציה (`lib/ai.js`), אף פעם מהדפדפן.
-- **Gemini 3.8 Flash** בשכבה החינמית (`GEMINI_MODEL=gemini-3.8-flash`), גיבוי `gemini-3.5-flash-lite` על ידי החלפת המשתנה. שם המודל נקרא ממשתנה סביבה עם ברירת מחדל בקוד.
-- קריאת REST ב-`fetch` לנקודת הקצה `generateContent`, עם סכמת פלט (`responseMimeType: application/json` ו-`responseSchema`), בלי ספריית SDK.
-- בשכבה החינמית התוכן משמש את גוגל לשיפור מוצרים, ולכן רק נתוני דמה נשלחים.
+- **OpenAI, הדגם `gpt-6-luna`** (`OPENAI_MODEL`), בתשלום עם קרדיט מראש, טעינה אוטומטית כבויה ומגבלת הוצאה חודשית (החלופה בתשלום שהסטאק מתיר). שם המודל נקרא ממשתנה סביבה עם ברירת מחדל בקוד. עד M4 התוכנית הייתה Gemini Flash בשכבה החינמית. הוא הוחלף בגלל עומס (ADR-14).
+- קריאת REST ב-`fetch` לנקודת הקצה `/v1/responses`, עם סכמת פלט קשיחה (`text.format` מסוג `json_schema`, `strict: true`), `reasoning.effort: none` ו-`store: false`, בלי ספריית SDK. המפתח בכותרת `Authorization: Bearer`.
+- רק נתוני דמה נשלחים למודל.
 - ה-AI אינו מחליט. הוא מציע המלצות וניסוח. אישור המנהל נשאר שלב אנושי מחייב.
 - הקוד מחשב: שעת מפגש, סטטוס, עיגול, מי לקוח חוזר. המודל מקבל את התוצאות ואינו מחשב.
 - ההזמנה נשמרת **גם אם ה-AI נכשל** (ראו "כשל").
@@ -442,12 +442,13 @@ $$;
 
 ```json
 {
-  "type": "OBJECT",
+  "type": "object",
   "properties": {
-    "recommended_services": { "type": "ARRAY", "items": { "type": "STRING", "enum": ["porter", "wheelchair"] } },
-    "customer_paragraph": { "type": "STRING" }
+    "recommended_services": { "type": "array", "items": { "type": "string", "enum": ["porter", "wheelchair"] } },
+    "customer_paragraph": { "type": "string" }
   },
-  "required": ["recommended_services", "customer_paragraph"]
+  "required": ["recommended_services", "customer_paragraph"],
+  "additionalProperties": false
 }
 ```
 
@@ -467,7 +468,7 @@ $$;
 ```json
 {
   "status": "ok",
-  "model": "gemini-3.8-flash",
+  "model": "gpt-6-luna",
   "generated_at": "2026-10-25T10:00:00Z",
   "recommended_services": ["porter"],
   "customer_paragraph": "Thank you for choosing Sereno...",
@@ -672,11 +673,11 @@ meeting = עיגול כלפי מטה לכפולה של 5 דקות
 | משתנה | סוג | מי קורא | הערה |
 |---|---|---|---|
 | `SUPABASE_SECRET_KEY` | Secret | `lib/supabase.js` | נותן גישה מלאה. רק בפונקציות |
-| `GEMINI_API_KEY` | Secret | `lib/ai.js` | |
+| `OPENAI_API_KEY` | Secret | `lib/ai.js` | מפתח נפרד ל-Production ול-`.env.local` |
 | `N8N_WEBHOOK_SECRET` | Secret | `lib/notify.js` | ערך ה-Header auth של ה-Webhook |
 | `SUPABASE_URL` | Config | `lib/supabase.js`, `api/config.js` | |
 | `SUPABASE_PUBLISHABLE_KEY` | Config | `api/config.js` | מפתח ציבורי, לכניסת צוות בלבד. נוסף לרשימה של `tech-stack.md`, כי הכניסה נעשית בדף |
-| `GEMINI_MODEL` | Config | `lib/ai.js` | `gemini-3.8-flash` |
+| `OPENAI_MODEL` | Config | `lib/ai.js` | `gpt-6-luna` |
 | `N8N_WEBHOOK_URL` | Config | `lib/notify.js` | כתובת ה-Webhook של Production |
 
 אחרי כל שינוי במשתנה צריך Redeploy.
@@ -687,17 +688,17 @@ meeting = עיגול כלפי מטה לכפולה של 5 דקות
 |---|---|
 | Credentials של n8n | סיסמת האפליקציה של Gmail (SMTP) |
 | דשבורד Supabase | משתמשי הצוות, `app_metadata.role`, הגדרת "Allow new users to sign up" כבויה |
-| `.env.local` (הרצה מקומית בלבד) | מפתחות dev נפרדים: `SUPABASE_SECRET_KEY` (מפתח סודי נוסף של אותו פרויקט), `GEMINI_API_KEY`, `N8N_WEBHOOK_SECRET` (הסוד של Webhook `sereno-dev`). הסטודנט מדביק אותם בעצמו (החלטה 20) |
+| `.env.local` (הרצה מקומית בלבד) | מפתחות dev נפרדים: `SUPABASE_SECRET_KEY` (מפתח סודי נוסף של אותו פרויקט), `OPENAI_API_KEY`, `N8N_WEBHOOK_SECRET` (הסוד של Webhook `sereno-dev`). הסטודנט מדביק אותם בעצמו (החלטה 20) |
 
 ### מה מגיע לדפדפן, ומה אסור
 
 | מותר להגיע לדפדפן | אסור שיגיע לדפדפן |
 |---|---|
 | כתובת פרויקט Supabase ומפתח ציבורי (דרך `/api/config`, לכניסת צוות) | `SUPABASE_SECRET_KEY` |
-| טוקן הגישה של המשתמש המחובר (שלו בלבד) | `GEMINI_API_KEY` |
+| טוקן הגישה של המשתמש המחובר (שלו בלבד) | `OPENAI_API_KEY` |
 | תשובות JSON מ-`/api` לפי ההרשאה של התפקיד | `N8N_WEBHOOK_URL` ו-`N8N_WEBHOOK_SECRET` |
 | רשימות קבועות (`data/lists.json`) | סיסמת SMTP של Gmail |
-| קוד אסמכתא של הזמנה (8 תווים) | הודעות שגיאה גולמיות של Supabase, Gemini או n8n |
+| קוד אסמכתא של הזמנה (8 תווים) | הודעות שגיאה גולמיות של Supabase, OpenAI או n8n |
 | | מייל הלקוח וטלפון של לקוחות אחרים (חוץ ממנהל מחובר) |
 | | `ai_output` ו-`previous_orders` לנציג או לאנונימי |
 | | הערות מנהל במיילים ללקוח |
@@ -705,7 +706,7 @@ meeting = עיגול כלפי מטה לכפולה של 5 דקות
 ### קבצי הגנה בריפו (לפני הקומיט הראשון)
 
 - `.gitignore` עם `.env`, `.env.*` ו-`!.env.example`.
-- `.env.example` עם שמות המפתחות הסודיים בלבד, שורה לכל מפתח, בלי ערכים: `GEMINI_API_KEY`, `SUPABASE_SECRET_KEY`, `N8N_WEBHOOK_SECRET`. ערכי Config לא נכנסים לקובץ. הם נשמרים ב-Vercel, גם בסביבת Development.
+- `.env.example` עם שמות המפתחות הסודיים בלבד, שורה לכל מפתח, בלי ערכים: `OPENAI_API_KEY`, `SUPABASE_SECRET_KEY`, `N8N_WEBHOOK_SECRET`. ערכי Config לא נכנסים לקובץ. הם נשמרים ב-Vercel, גם בסביבת Development.
 - `.claude/settings.json` עם `permissions.deny` על `Read(./.env)` ועל `Read(./.env.*)`.
 
 ---
@@ -725,7 +726,7 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── auth.js                  אימות טוקן, קריאת תפקיד, requireRole
 │   ├── http.js                  עטיפת JSON, בדיקת שיטה, טיפול בשגיאות
 │   ├── validate.js              ולידציה של גוף בקשה ופרמטרים
-│   ├── ai.js                    קריאה ל-Gemini, סכמות, בדיקת פלט
+│   ├── ai.js                    קריאה ל-OpenAI, סכמות, בדיקת פלט
 │   ├── prompts.js               הוראות מערכת ובניית הקלט
 │   ├── notify.js                קריאה ל-Webhook של n8n
 │   ├── orders-view.js           בניית תצוגת הזמנה לפי תפקיד, flight_change_pending
@@ -810,7 +811,7 @@ sereno/                          ריפו ציבורי, ענף main
 
 1. **Vercel:** האם `outputDirectory: "public"` ב-`vercel.json` נתמך בפרויקט בלי framework, וכן שייבוא קובץ מ-`public/` מתוך פונקציה נארז בפריסה.
 2. **Supabase Auth:** כתובת ה-REST המדויקת לכניסה עם מייל וסיסמה, ואיך עורכים `app_metadata` של משתמש בדשבורד.
-3. **Gemini:** האם המפתח נשלח בכותרת (ולא רק כפרמטר בכתובת), ואם `generateContent` עדיין הממשק המומלץ לעומת Interactions API.
+3. **ספק ה-AI:** איך נשלח המפתח ומהו הממשק המומלץ. (עד M4: Gemini. מ-M4: OpenAI Responses API, ראו ADR-14.)
 4. **n8n:** שם הכותרת המדויק בהגדרת Header auth, וצומת Send Email עם SMTP של Gmail בגרסה שבשימוש.
 5. **Node:** אם נשתמש ב-`import ... with { type: 'json' }` לקריאת `data/lists.json` בגרסת Node של הפרויקט, או בקריאה עם `fs`.
 
@@ -828,10 +829,11 @@ sereno/                          ריפו ציבורי, ענף main
 **Decision:** `api/config.js` uses `import lists from '../data/lists.json' with { type: 'json' }`.
 **Consequences:** Verified in `vercel dev` and in the Production deployment (Node 26): `/api/config` returns the lists. No file-system paths to manage.
 
-### ADR-3: Gemini through `generateContent` with the key in a header
+### ADR-3: Gemini through `generateContent` with the key in a header (superseded by ADR-14 in M4)
 **Context:** ARCHITECTURE §9 point 3. Google's current docs show mostly the newer Interactions API in their examples, and do not say `generateContent` is deprecated.
 **Decision:** Keep REST `generateContent` with `responseMimeType` + `responseSchema`, as planned. The key is sent in the `x-goog-api-key` header, never in the URL.
 **Consequences:** Verified in M1: `gemini-3.5-flash-lite` returned valid JSON matching the `order_draft` schema. `gemini-3.8-flash` (the default) answered `503 UNAVAILABLE` (high demand) on every attempt during M1, so the real AI layer in M4 must treat 503/timeouts as a normal failure, and the fallback model can be selected through `GEMINI_MODEL`. Revisit the Interactions API if `generateContent` is announced as deprecated.
+**M4 update (19.11.2026):** Docs re-checked for §9 point 3: the Interactions API is GA (June 2026) and recommended for new projects; `generateContent` is called legacy but fully supported, with no deprecation date; REST examples still send the key in `x-goog-api-key`. Asaf approved staying on `generateContent` for M4. A real call with the planned M4 `order_draft` request (system instruction, schema, temperature 0.3, 20 s timeout): `gemini-3.8-flash` failed 4 of 4 (`503 UNAVAILABLE` or timeout); `gemini-3.5-flash-lite` returned valid JSON 3 of 4 in 8–10 s, one try timed out. So `GEMINI_MODEL` is set (by Asaf) to `gemini-3.5-flash-lite` in Vercel (Development and Production); the code default stays `gemini-3.8-flash` as §4 says. About one call in four may still fail; the failure path (order saved, "AI suggestions unavailable") covers it.
 
 ### ADR-4: `meeting-time.js` stays in `public/js/`
 **Context:** ARCHITECTURE §9 point 1: it is not yet known whether Vercel bundles a file from `public/` into a function that imports it.
@@ -878,3 +880,28 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** The full API in §5.1 serves milestones 3–7; M3 builds only the manager's approve/reject flow.
 **Decision:** In M3 `GET /api/orders` is manager-only (`view=inbox` with `pending` orders, soonest departure first, and `id=`); an agent gets `403`. `POST /api/order-decision` accepts only `approve` and `reject` from a manager; other actions answer `400 "Unknown action."` and an agent gets `403`. The order view also returns `customer_notes` (shown in the "Customer notes" panel), which the §5.1 example omits. `submit-order` sends `manager_alert` to n8n after the insert, with `meeting_time_local` (the recommended time).
 **Consequences:** M4 adds `view=approved`, the agent's restricted view and `complete`; M5 adds `needs_clarification` and flight-change orders to the inbox with their actions; M6 adds notes, returning customer and history. Each widens these checks rather than replacing them.
+
+### ADR-13: One automatic retry on the other Gemini Flash model (superseded by ADR-14)
+**Context:** §4 plans a 20 s timeout and a fallback model chosen by changing `GEMINI_MODEL`. In M4 testing (19.11.2026) the free-tier Gemini models were often busy: `gemini-3.8-flash` failed every try, and `gemini-3.5-flash-lite` also answered `503` or timed out on some tries. Asaf considered switching to OpenAI (the paid alternative the course stack allows) and chose to stay on Gemini with an automatic retry, deciding finally after the 20-input AI round.
+**Decision:** `lib/ai.js` tries `GEMINI_MODEL` (or the code default) first and, only when that try is busy (`429`/`5xx`), times out or cannot connect, tries the other Flash model once. Each try has a 12 s timeout instead of one 20 s timeout. A bad answer (blocked, invalid JSON, failed output check) is not retried. `ai_output.model` records the model that answered.
+**Consequences:** The customer waits at most about 24 s after "Submit request" (about 10 s in the normal case). When both models are busy, the order is still saved with `ai_output = {"status":"failed"}`, as before. If the AI round shows many failures, the switch to OpenAI is reconsidered (it would change PRD §5 and §4 here, with Asaf's approval).
+
+### ADR-14: The AI layer moves from Gemini to OpenAI
+**Context:** In the M4 AI round (19–20.11.2026) the free-tier Gemini models were overloaded: only 5 of 22 inputs got an answer, even with the ADR-13 retry; a one-sentence request took 10–18 s. The five answers were clean, so the problem was availability, not quality. The course stack names OpenAI as the paid alternative to Gemini Flash.
+**Decision:** Asaf chose OpenAI (20.11.2026). `lib/ai.js` calls `POST https://api.openai.com/v1/responses` with `Authorization: Bearer OPENAI_API_KEY`, model `OPENAI_MODEL` (default `gpt-6-luna`, the provider's most efficient model, checked in the current docs), `text.format` = strict `json_schema`, `reasoning.effort: "none"`, `max_output_tokens: 400` and `store: false`. One attempt with a 20 s timeout, as §4 planned; a refusal, an incomplete response or a failed output check counts as a failure. The prompt, the input, the output checks and `ai_output` are unchanged. The account has prepaid credit, auto recharge off and a monthly budget; the Production key is in Vercel and a separate development key in `.env.local`.
+**Consequences:** First real calls answered valid JSON in about 4 s. ADR-3's Gemini choices and ADR-13's retry no longer apply. `GEMINI_API_KEY` and `GEMINI_MODEL` can be removed from Vercel, `.env.local` and `.env.example` once M4 is approved. Costs are a fraction of a cent per order.
+
+### ADR-15: Milestone 4 scope of the staff APIs for the field agent
+**Context:** M4 adds the field agent (FR-26, FR-27, FR-41). ADR-12 kept the M3 staff APIs manager-only. The agent must see only what the job needs, and must not be able to decide orders.
+**Decision:** `GET /api/orders` accepts both roles; `view=inbox` and `id=` stay manager-only (`403` for the agent), and `view=approved` returns `approved` orders sorted by `final_time` (limit 50). The agent's reply goes through `toAgentView` in `lib/orders-view.js`: id, reference, status, customer name and phone, flight, travelers, bags, services, escort scope, final time and manager notes; never the email, `ai_output`, customer notes, recommended time or history. In `POST /api/order-decision` the role is checked against the action before the body is validated (`roleMayDecide` in `lib/auth.js`): the agent may only `complete`, the manager may do everything except `complete`. `complete` runs `complete_order` in `002_functions.sql`, a conditional update `approved` → `completed`; a second request answers `409`. All agents see all approved orders (assignment per agent is a later idea, not in the PRD).
+**Consequences:** Hiding a field from the agent is one place (`toAgentView`). Approved orders whose flight already left stay on the agent screen until marked completed. A wrong-role request never reaches the database.
+
+### ADR-16: One designed email template inside n8n
+**Context:** DESIGN ("מיילים") asks for one designed template for the customer emails and the manager alert, readable in Gmail on desktop and phone, with a plain-text version. The emails are sent by n8n (ARCHITECTURE §5.3), and the live workflow is changed only by Asaf (ADR-5).
+**Decision:** The site sends data only (`approvedEmailPayload`, `rejectedEmailPayload` in `lib/notify.js`; never manager notes, customer notes or the phone). In n8n each "Set <type>" node sets the content fields (subject, preheader, heading, intro, highlighted meeting time, detail rows, AI paragraph, closing), and one Code node, "Render email", turns them into a single HTML layout (tables, inline styles, max 600 px, Georgia/Arial, no images, no buttons, every value HTML-escaped) plus a plain-text version. Send Email sends both. The repo export `n8n/sereno-notifications.json` holds placeholders only.
+**Consequences:** A change to the look is one Code node; M5's emails reuse it by adding a Set node with the same fields (types without them fall back to their plain text inside the same layout). Asaf re-imports the export, or edits the node, when the template changes.
+
+### ADR-17: `email_sent` means n8n accepted the event
+**Context:** After a decision the manager must know whether the customer's email went out (FR-31, decision 10: no retry queue). The n8n webhook answers immediately, before the email is sent.
+**Decision:** `POST /api/order-decision` saves the decision first, then calls `notify`; `email_sent` in the reply is `true` when n8n accepted the event and `false` on a network error, timeout, or a non-2xx answer (for example a wrong secret). On `false` the manager screen keeps the order open with the warning "Decision saved, but the email to the customer was not sent." Approved by Asaf (open point O3).
+**Consequences:** An address blocked by the allowlist, or a sending error inside n8n, still shows as sent; those are seen only in the n8n executions list. Changing n8n to answer after sending would make the flag exact, at the cost of a slower decision.

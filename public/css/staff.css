@@ -114,3 +114,73 @@
   margin: 0 auto;
   padding: var(--space-3) var(--gutter);
 }
+
+/* ---------- Field agent: approved orders as cards (phone first, mockup 8) ---------- */
+.agent-header { max-width: calc(var(--content-narrow) + 2 * var(--gutter)); }
+.agent {
+  width: 100%;
+  max-width: calc(var(--content-narrow) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-3) var(--gutter) var(--space-5);
+}
+.agent__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.agent__status { color: var(--color-success); font-weight: 600; min-height: 1.4em; margin: var(--space-1) 0; }
+.agent__status.is-error { color: var(--color-error); }
+.agent__status:focus { outline: none; }
+.agent-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--space-2); }
+
+.agent-card {
+  background: var(--color-paper);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-left: 4px solid transparent;
+  border-radius: var(--radius);
+  padding: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.agent-card--first { border-left-color: var(--color-gold); }
+.agent-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: var(--rule-width) solid var(--color-rule-light);
+}
+.agent-card__label { display: block; font-size: var(--fs-tag); color: var(--color-ink-soft); }
+.agent-card__value { display: block; font-weight: 700; font-size: var(--fs-small); overflow-wrap: anywhere; }
+.agent-card__time {
+  display: block;
+  font-family: var(--font-heading);
+  font-weight: 500;
+  font-size: var(--fs-time);
+  line-height: 1.05;
+  color: var(--color-navy);
+}
+.agent-card__date { display: block; font-size: var(--fs-small); color: var(--color-ink-soft); }
+.agent-card__departure { text-align: right; }
+.agent-card__departure-time {
+  display: block;
+  font-family: var(--font-heading);
+  font-size: 22px;
+  color: var(--color-navy);
+}
+.agent-card__person { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); flex-wrap: wrap; }
+.agent-card__name { font-weight: 700; color: var(--color-navy); }
+.agent-card__phone { font-weight: 600; font-size: var(--fs-small); color: var(--color-navy); }
+.agent-card__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px var(--space-2); }
+.agent-card__notes {
+  background: var(--color-cream);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: var(--radius);
+  padding: 12px var(--space-2);
+}
+.agent-card__notes .agent-card__value { white-space: pre-line; }
+.agent-card__actions { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.confirm-row { width: 100%; display: flex; flex-direction: column; gap: var(--space-1); }
+.confirm-row__question { font-weight: 600; font-size: var(--fs-small); }
+.confirm-row__buttons { display: flex; gap: 12px; }
+.confirm-row__buttons .btn { flex: 1; }
+/* Manager: AI email draft (quoted, secondary text) */
+.ai-draft { color: var(--color-ink-soft); }

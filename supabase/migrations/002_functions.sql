@@ -91,3 +91,20 @@ revoke execute on function public.decide_order(
 grant execute on function public.decide_order(
   uuid, text[], text, timestamptz, text, timestamptz, timestamptz
 ) to service_role;
+
+-- Marks an approved order as completed (field agent, FR-41, decision 8).
+-- Returns the updated row, or zero rows when the order is not approved
+-- (never approved, or already completed): the API answers 409.
+create or replace function public.complete_order(p_order_id uuid)
+returns setof public.orders
+language sql security invoker set search_path = ''
+as $$
+  update public.orders
+     set status = 'completed'
+   where id = p_order_id
+     and status = 'approved'
+  returning *;
+$$;
+
+revoke execute on function public.complete_order(uuid) from public, anon, authenticated;
+grant execute on function public.complete_order(uuid) to service_role;

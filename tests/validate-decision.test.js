@@ -27,8 +27,17 @@ test('bad body or order id', () => {
   assert.ok(validateDecisionBody({ order_id: 'abc', action: 'approve' }).error);
 });
 
-test('only approve and reject exist in M3', () => {
-  for (const action of ['complete', 'add_note', 'confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change', '', undefined, 1]) {
+test('complete is accepted (M4)', () => {
+  assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'complete' }).value,
+    { order_id: ID.toLowerCase(), action: 'complete', final_time: null });
+});
+
+test('meeting time is refused with complete', () => {
+  assert.ok(validateDecisionBody({ order_id: ID, action: 'complete', final_time: '2026-12-10T10:45:00Z' }).error);
+});
+
+test('actions of later milestones do not exist yet', () => {
+  for (const action of ['add_note', 'confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change', '', undefined, 1]) {
     assert.equal(validateDecisionBody({ order_id: ID, action }).error, 'Unknown action.');
   }
 });

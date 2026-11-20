@@ -10,6 +10,7 @@ import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
 const BEFORE_DEPARTURE = 'Meeting time must be before departure';
 const MISSING_TIME = 'Please enter a date and time.';
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
+const EMAIL_NOT_SENT = 'Decision saved, but the email to the customer was not sent.';
 
 const session = requireRole('manager');
 
@@ -32,6 +33,9 @@ const STATUS_TAGS = {
 let labels = { services: {}, escort_scopes: {} };
 let orders = [];
 let selectedId = null;
+// A just-decided order whose customer email was not sent: it left the list but stays open
+// in the details with the warning, so the manager sees it (DESIGN, decision 10).
+let heldOrder = null;
 
 function labelMap(list) {
   return Object.fromEntries((list || []).map((item) => [item.code, item.label]));
@@ -86,6 +90,7 @@ function renderList() {
 
 function selectOrder(id) {
   selectedId = id;
+  heldOrder = null;
   for (const button of listNode.querySelectorAll('.order-item')) {
     button.setAttribute('aria-pressed', String(button.dataset.id === id));
   }
@@ -106,9 +111,20 @@ function panel(title, text) {
     el('p', { className: 'panel__text' }, text));
 }
 
+// AI panel (M4): the personal email draft when the AI output passed every check.
+// The service recommendation is shown from M6.
+function aiPanel(order) {
+  const ai = order.ai_output;
+  if (!ai || ai.status !== 'ok' || !ai.customer_paragraph) return panel('AI recommendations', 'AI suggestions unavailable');
+  return el('div', { className: 'panel stack' },
+    el('h3', { className: 'panel__title' }, 'AI recommendations'),
+    el('p', { className: 'panel__text' }, 'Email draft:'),
+    el('p', { className: 'panel__text ai-draft' }, `“${ai.customer_paragraph}”`));
+}
+
 function renderDetails() {
   clear(detailsNode);
-  const order = orders.find((o) => o.id === selectedId);
+  const order = orders.find((o) => o.id === selectedId) || (heldOrder && heldOrder.id === selectedId ? heldOrder : null);
   if (!order) {
     detailsNode.hidden = true;
     return;
@@ -133,9 +149,14 @@ function renderDetails() {
       dataItem('Services · Escort', `${servicesText(order)} · ${escortText}`)),
     el('div', { className: 'details-panels' },
       panel('Customer notes', order.customer_notes || 'No notes'),
-      panel('AI recommendations', 'AI suggestions unavailable')),
+      aiPanel(order)),
   );
-  if (order.status === 'pending') detailsNode.append(decisionArea(order));
+  if (order === heldOrder) {
+    detailsNode.append(el('div', { className: 'decision' },
+      el('p', { className: 'alert-error', attrs: { role: 'alert' } }, EMAIL_NOT_SENT)));
+  } else if (order.status === 'pending') {
+    detailsNode.append(decisionArea(order));
+  }
 }
 
 // ---------- Decision: meeting time, Reject, Approve ----------
@@ -194,10 +215,15 @@ function decisionArea(order) {
     rejectButton.disabled = true;
     approveButton.disabled = true;
     try {
-      await staffPost('/api/order-decision', body);
+      const data = await staffPost('/api/order-decision', body);
       const verb = body.action === 'approve' ? 'approved' : 'rejected';
-      setStatus(`Order ${order.reference} ${verb}.`);
-      removeOrder(order.id);
+      if (data.email_sent) {
+        setStatus(`Order ${order.reference} ${verb}. Email sent to the customer.`);
+        removeOrder(order.id);
+      } else {
+        setStatus(`Order ${order.reference} ${verb}.`);
+        holdOrder(data.order);
+      }
     } catch (err) {
       if (err.status === 401) return; // going to the login page
       if (err.status === 400 && err.message === BEFORE_DEPARTURE) showFieldError(BEFORE_DEPARTURE);
@@ -238,6 +264,15 @@ function removeOrder(id) {
   renderDetails();
 }
 
+// After a decision whose email was not sent: drop it from the list, keep it open with the warning.
+function holdOrder(decided) {
+  orders = orders.filter((o) => o.id !== decided.id);
+  heldOrder = decided;
+  selectedId = decided.id;
+  renderList();
+  renderDetails();
+}
+
 // ---------- Loading ----------
 
 async function loadOrders() {
@@ -246,6 +281,7 @@ async function loadOrders() {
   try {
     const data = await staffGet('/api/orders?view=inbox');
     orders = data.orders;
+    heldOrder = null;
     if (!orders.some((o) => o.id === selectedId)) selectedId = orders.length ? orders[0].id : null;
     renderList();
     renderDetails();

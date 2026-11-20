@@ -10,15 +10,11 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/staff.css">
-  <!-- M3 placeholder: the field agent screen is built in Milestone 4. -->
-  <script type="module">
-    import { requireRole, bindLogout } from '/js/session.js';
-    if (requireRole('agent')) bindLogout(document.getElementById('logout'));
-  </script>
+  <script type="module" src="/js/agent.js"></script>
 </head>
 <body>
   <header class="site-header staff-header">
-    <div class="site-header__inner">
+    <div class="site-header__inner agent-header">
       <span class="brand">Sereno</span>
       <div class="staff-header__right">
         <span class="staff-role">Field agent</span>
@@ -27,9 +23,16 @@
     </div>
   </header>
 
-  <main class="staff-main stack">
-    <h1 class="h3">Approved orders</h1>
-    <p class="text-soft">Approved orders will appear here.</p>
+  <main class="agent">
+    <div class="agent__head">
+      <h1 class="h3">Approved orders</h1>
+      <button class="btn btn-small btn-secondary" id="refresh" type="button">Refresh</button>
+    </div>
+    <p class="agent__status text-small" id="status-line" role="status"></p>
+    <p class="alert-error" id="list-error" role="alert" hidden></p>
+    <p class="text-soft" id="list-loading">Loading orders…</p>
+    <p class="text-soft" id="list-empty" hidden>No approved orders.</p>
+    <ul class="agent-list" id="order-list" aria-label="Approved orders"></ul>
   </main>
 </body>
 </html>

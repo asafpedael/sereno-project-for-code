@@ -7,6 +7,8 @@ import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
 import { notify } from '../lib/notify.js';
 import { formatLocalIL } from '../lib/time.js';
+import { generateOrderDraft } from '../lib/ai.js';
+import { buildOrderDraftInput } from '../lib/prompts.js';
 import lists from '../data/lists.json' with { type: 'json' };
 
 const SERVICE_LABELS = Object.fromEntries(lists.services.map((s) => [s.code, s.label]));
@@ -133,8 +135,15 @@ export default withHandler(['POST'], async (req, res) => {
 
   const reference = saved.id.slice(0, 8).toUpperCase();
 
-  // 8. (M4: AI order_draft goes here.) Alert the manager through n8n (FR-14). The order is
-  //    already saved, so a failed alert is only logged and the customer still gets success.
+  // 8. AI order_draft (FR-17): a personal paragraph for the approval email, checked in code.
+  //    The order is already saved: an AI failure only stores { status: 'failed' }.
+  const aiOutput = await generateOrderDraft(buildOrderDraftInput(order, flight));
+  const { error: aiSaveError } = await getSupabase()
+    .from('orders').update({ ai_output: aiOutput }).eq('id', saved.id);
+  if (aiSaveError) console.error(`submit-order: ai_output not saved (${aiSaveError.code || 'no code'})`);
+
+  // 9. Alert the manager through n8n (FR-14). The order is already saved, so a failed
+  //    alert is only logged and the customer still gets success.
   await notify({
     type: 'manager_alert',
     reference,
@@ -150,6 +159,6 @@ export default withHandler(['POST'], async (req, res) => {
     needs_clarification: false,
   });
 
-  // 9. Reply: reference and status only
+  // 10. Reply: reference and status only
   sendOk(res, { reference, status: 'pending' });
 });
