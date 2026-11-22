@@ -3,17 +3,29 @@
 // M4: the field agent marks an approved order completed (action "complete", agent only), and
 // the customer gets an email after approve/reject, sent only once the decision is saved.
 // A failed email never undoes the decision: the reply says email_sent: false (decision 10).
+// M5: reject from "needs_clarification", confirm_flight_missing (clarification email) and
+// approve/ignore of a flight time change.
 import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { requireStaff, roleMayDecide } from '../lib/auth.js';
 import { validateDecisionBody } from '../lib/validate.js';
-import { ORDER_SELECT, toManagerView, toAgentView } from '../lib/orders-view.js';
+import {
+  ORDER_SELECT, toManagerView, toAgentView, flightChangePending, clarificationSent,
+} from '../lib/orders-view.js';
 import { meetingTime } from '../public/js/meeting-time.js';
-import { notify, approvedEmailPayload, rejectedEmailPayload } from '../lib/notify.js';
+import {
+  notify, approvedEmailPayload, rejectedEmailPayload, clarificationEmailPayload, flightChangeEmailPayload,
+} from '../lib/notify.js';
+import { fixedClarificationParagraph, buildClarificationInput } from '../lib/prompts.js';
+import { generateClarificationDraft } from '../lib/ai.js';
+import { formatDateOnly } from '../lib/time.js';
 
 const BEFORE_DEPARTURE = 'Meeting time must be before departure';
 const ALREADY_DECIDED = 'This order was already decided.';
 const NOT_COMPLETABLE = 'This order is not approved or was already completed.';
+const CLARIFICATION_DONE = 'The clarification email was already sent, or the order was already decided.';
+const CHANGE_DONE = 'This flight change was already handled.';
+const REJECTABLE = ['pending', 'needs_clarification'];
 
 function readBody(req) {
   try {
@@ -21,6 +33,82 @@ function readBody(req) {
   } catch {
     return undefined; // invalid JSON
   }
+}
+
+// Missing flight (plan D9): checks, paragraph, claim, email, release if the email failed.
+// The claim is one conditional update that sets sent_at only while it is still empty, so two
+// clicks at the same moment cannot send two emails. The status stays "needs_clarification"
+// (decision 9: the order can only stay there or be rejected).
+async function confirmFlightMissing(res, order) {
+  if (order.status !== 'needs_clarification' || clarificationSent(order)) {
+    return sendError(res, 409, 'conflict', CLARIFICATION_DONE);
+  }
+
+  // clarification_draft (AI, plan D10), or the fixed paragraph when it fails (plan D11).
+  const draft = await generateClarificationDraft(buildClarificationInput(order));
+  const paragraph = draft.status === 'ok'
+    ? draft.paragraph
+    : fixedClarificationParagraph(order.flight_no_submitted, formatDateOnly(order.flight_date_submitted));
+  const sentAt = new Date().toISOString();
+  const aiOutput = draft.status === 'ok'
+    ? { status: 'ok', model: draft.model, generated_at: draft.generated_at, clarification: { paragraph, sent_at: sentAt } }
+    : { status: 'failed', clarification: { paragraph, sent_at: sentAt } };
+
+  const { data: claimed, error: claimError } = await getSupabase()
+    .from('orders')
+    .update({ ai_output: aiOutput })
+    .eq('id', order.id)
+    .eq('status', 'needs_clarification')
+    .is('ai_output->clarification->>sent_at', null)
+    .select('id');
+  if (claimError) throw claimError;
+  if (!claimed || claimed.length === 0) return sendError(res, 409, 'conflict', CLARIFICATION_DONE);
+
+  const emailSent = await notify(clarificationEmailPayload(order, paragraph));
+  if (!emailSent) {
+    // Release only our own claim, so the manager can try again.
+    const { error: releaseError } = await getSupabase()
+      .from('orders')
+      .update({ ai_output: { ...aiOutput, clarification: { paragraph, sent_at: null } } })
+      .eq('id', order.id)
+      .eq('ai_output->clarification->>sent_at', sentAt);
+    if (releaseError) console.error(`order-decision: clarification not released (${releaseError.code || 'no code'})`);
+  }
+
+  const updated = await readOrder(order.id);
+  return sendOk(res, { order: toManagerView(updated), email_sent: emailSent });
+}
+
+// Flight time changed after approval (plan D13, D8). Approve: new meeting time from the
+// flight's current departure (or the manager's time, before departure) and an update email.
+// Ignore: remembers the new departure, no email. Both run as one conditional update.
+async function resolveFlightChange(res, order, ignore, requestedFinal) {
+  if (!flightChangePending(order)) return sendError(res, 409, 'conflict', CHANGE_DONE);
+
+  const departure = new Date(order.flight.departure_at);
+  let recommended = null;
+  let finalTime = null;
+  if (!ignore) {
+    recommended = meetingTime(departure, order.travelers, order.bags);
+    finalTime = requestedFinal || recommended;
+    if (finalTime.getTime() >= departure.getTime()) {
+      return sendError(res, 400, 'bad_request', BEFORE_DEPARTURE);
+    }
+  }
+
+  const updated = await runUpdate('resolve_flight_change', {
+    p_order_id: order.id,
+    p_expected_departure: order.approved_departure_at,
+    p_new_departure: departure.toISOString(),
+    p_recommended: recommended ? recommended.toISOString() : null,
+    p_final_time: finalTime ? finalTime.toISOString() : null,
+    p_ignore: ignore,
+  });
+  if (!updated) return sendError(res, 409, 'conflict', CHANGE_DONE);
+
+  if (ignore) return sendOk(res, { order: toManagerView(updated) });
+  const emailSent = await notify(flightChangeEmailPayload(updated, order.final_time));
+  return sendOk(res, { order: toManagerView(updated), email_sent: emailSent });
 }
 
 // Reads one order with the customer's email and the flight.
@@ -65,11 +153,17 @@ export default withHandler(['POST'], async (req, res) => {
     return sendOk(res, { order: toAgentView(updated) });
   }
 
+  if (action === 'confirm_flight_missing') return confirmFlightMissing(res, order);
+  if (action === 'approve_flight_change' || action === 'ignore_flight_change') {
+    return resolveFlightChange(res, order, action === 'ignore_flight_change', requestedFinal);
+  }
+
   let updated;
   if (action === 'reject') {
-    if (order.status !== 'pending') return sendError(res, 409, 'conflict', ALREADY_DECIDED);
+    // From "pending" and from "needs_clarification" (ARCHITECTURE section 2, plan D12).
+    if (!REJECTABLE.includes(order.status)) return sendError(res, 409, 'conflict', ALREADY_DECIDED);
     updated = await runUpdate('decide_order', {
-      p_order_id: orderId, p_from: ['pending'], p_to: 'rejected',
+      p_order_id: orderId, p_from: REJECTABLE, p_to: 'rejected',
       p_final_time: null, p_notes: null, p_departure: null, p_recommended: null,
     });
   } else {

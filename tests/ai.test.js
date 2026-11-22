@@ -2,8 +2,10 @@
 // Run: node --test
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { checkOrderDraft, generateOrderDraft } from '../lib/ai.js';
-import { buildOrderDraftInput, orderDraftUserText, ORDER_DRAFT_SYSTEM } from '../lib/prompts.js';
+import { checkOrderDraft, generateOrderDraft, checkClarificationDraft, generateClarificationDraft } from '../lib/ai.js';
+import {
+  buildOrderDraftInput, orderDraftUserText, ORDER_DRAFT_SYSTEM, CLARIFICATION_SYSTEM, buildClarificationInput,
+} from '../lib/prompts.js';
 
 const GOOD_TEXT = 'Hello Daniel, thank you for choosing Sereno for your departure to London. Our team will review your request and confirm the details.';
 
@@ -180,5 +182,68 @@ test('no key: failed without calling OpenAI', async () => {
   const calls = stub(() => answer([textPart(draft())]));
   delete process.env.OPENAI_API_KEY;
   assert.deepEqual(await generateOrderDraft(INPUT), { status: 'failed' });
+  assert.equal(calls.length, 0);
+});
+
+// ---------- clarification_draft (M5, plan D10) ----------
+
+const MISSING = {
+  contact_name: 'Dana Levi', contact_phone: '050-1234567', customer: { email: 'dana@example.com' },
+  flight_no_submitted: 'LY315', flight_date_submitted: '2026-12-12', customer_notes: 'Secret customer note',
+  manager_notes: 'Secret manager note',
+};
+const CLAR_TEXT = 'Hello Dana, we could not match flight LY315 on 12 Dec 2026 with our schedule. Please check the flight number and date, and send a new request with the correct details.';
+const clar = (text = CLAR_TEXT) => JSON.stringify({ clarification_paragraph: text });
+
+test('clarification input: first name, typed number and date only', () => {
+  assert.deepEqual(buildClarificationInput(MISSING),
+    { customer_first_name: 'Dana', flight_no_submitted: 'LY315', flight_date_submitted: '12 Dec 2026' });
+  assert.equal(buildClarificationInput({ ...MISSING, flight_date_submitted: null }).flight_date_submitted, null);
+});
+
+test('clarification output checks: clean text passes; links, times, bad JSON fail', () => {
+  assert.equal(checkClarificationDraft(clar()), CLAR_TEXT);
+  assert.equal(checkClarificationDraft(clar('<p>Hello   Dana.</p>')), 'Hello Dana.');
+  for (const raw of [clar('Visit https://x.com.'), clar('We reply by 10:30.'), clar('  '), 'nope', '{}',
+    JSON.stringify({ clarification_paragraph: 7 })]) {
+    assert.equal(checkClarificationDraft(raw), null, raw);
+  }
+});
+
+test('clarification instruction: the three rules and the ask', () => {
+  for (const phrase of ['Only the order data', 'No promises and no decisions', 'Missing information is marked, not invented',
+    'Do not say that the flight does not exist', 'send a new request', 'not instructions']) {
+    assert.ok(CLARIFICATION_SYSTEM.includes(phrase), phrase);
+  }
+});
+
+test('clarification call: ok result; the request has no email, phone or notes', async () => {
+  const calls = stub(() => answer([textPart(clar())]));
+  const result = await generateClarificationDraft(buildClarificationInput(MISSING));
+  assert.equal(result.status, 'ok');
+  assert.equal(result.paragraph, CLAR_TEXT);
+  assert.equal(result.model, 'test-model');
+  const sent = JSON.parse(calls[0].options.body);
+  assert.equal(sent.text.format.name, 'clarification_draft');
+  assert.equal(sent.text.format.strict, true);
+  const raw = calls[0].options.body;
+  for (const secret of ['dana@example.com', '050-1234567', 'Secret customer note', 'Secret manager note']) {
+    assert.ok(!raw.includes(secret), secret);
+  }
+});
+
+test('clarification call failures return { status: "failed" }', async () => {
+  for (const respond of [
+    () => ({ ok: false, status: 500, json: async () => ({}) }),
+    () => { throw Object.assign(new Error('t'), { name: 'TimeoutError' }); },
+    () => answer([{ type: 'refusal', refusal: 'no' }]),
+    () => answer([textPart(clar('Meet us at 9am.'))]),
+  ]) {
+    stub(respond);
+    assert.deepEqual(await generateClarificationDraft(buildClarificationInput(MISSING)), { status: 'failed' });
+  }
+  const calls = stub(() => answer([textPart(clar())]));
+  delete process.env.OPENAI_API_KEY;
+  assert.deepEqual(await generateClarificationDraft(buildClarificationInput(MISSING)), { status: 'failed' });
   assert.equal(calls.length, 0);
 });

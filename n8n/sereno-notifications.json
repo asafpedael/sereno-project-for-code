@@ -436,27 +436,69 @@
         "assignments": {
           "assignments": [
             {
-              "id": "5e7e0000-0000-4000-8000-000000000027",
+              "id": "5e7e0000-0000-4000-8000-000000000200",
               "name": "to",
               "value": "={{ $json.body.to }}",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000028",
+              "id": "5e7e0000-0000-4000-8000-000000000201",
+              "name": "type",
+              "value": "customer_clarification",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000202",
               "name": "subject",
               "value": "=Please check your flight details ({{ $json.body.reference }})",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000029",
-              "name": "text",
-              "value": "=Hello {{ $json.body.customer_name }},\n\n{{ $json.body.ai_paragraph || \"We could not find your flight. Please check the flight number and date and reply to this email.\" }}\n\nSereno",
+              "id": "5e7e0000-0000-4000-8000-000000000203",
+              "name": "preheader",
+              "value": "We could not match your flight in our schedule",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000030",
-              "name": "type",
-              "value": "customer_clarification",
+              "id": "5e7e0000-0000-4000-8000-000000000204",
+              "name": "heading",
+              "value": "Please check your flight details",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000205",
+              "name": "intro",
+              "value": "=Hello {{ $json.body.customer_name }}, thank you for your escort request.",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000206",
+              "name": "highlight_label",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000207",
+              "name": "highlight_value",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000208",
+              "name": "rows",
+              "value": "={{ [\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight number you entered\", value: $json.body.flight_no },\n  { label: \"Departure date you entered\", value: $json.body.departure_local }\n] }}",
+              "type": "array"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000209",
+              "name": "paragraph",
+              "value": "={{ $json.body.ai_paragraph || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000210",
+              "name": "closing",
+              "value": "You are welcome to send a new request at any time.",
               "type": "string"
             }
           ]
@@ -477,27 +519,69 @@
         "assignments": {
           "assignments": [
             {
-              "id": "5e7e0000-0000-4000-8000-000000000032",
+              "id": "5e7e0000-0000-4000-8000-000000000211",
               "name": "to",
               "value": "={{ $json.body.to }}",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000033",
+              "id": "5e7e0000-0000-4000-8000-000000000212",
+              "name": "type",
+              "value": "customer_flight_change",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000213",
               "name": "subject",
               "value": "=Your Sereno meeting time has changed ({{ $json.body.reference }})",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000034",
-              "name": "text",
-              "value": "=Hello {{ $json.body.customer_name }},\n\nYour flight time changed, so your meeting time changed too.\nPrevious meeting time: {{ $json.body.previous_meeting_time_local }}\nNew meeting time: {{ $json.body.meeting_time_local }}\n\nSereno",
+              "id": "5e7e0000-0000-4000-8000-000000000214",
+              "name": "preheader",
+              "value": "=New meeting time: {{ $json.body.meeting_time_local }}",
               "type": "string"
             },
             {
-              "id": "5e7e0000-0000-4000-8000-000000000035",
-              "name": "type",
-              "value": "customer_flight_change",
+              "id": "5e7e0000-0000-4000-8000-000000000215",
+              "name": "heading",
+              "value": "Your meeting time has changed",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000216",
+              "name": "intro",
+              "value": "=Hello {{ $json.body.customer_name }}, the departure time of your flight has changed, so we have updated your meeting time.",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000217",
+              "name": "highlight_label",
+              "value": "New meeting time",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000218",
+              "name": "highlight_value",
+              "value": "={{ $json.body.meeting_time_local }}",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000219",
+              "name": "rows",
+              "value": "={{ [\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"New departure\", value: $json.body.departure_local }\n] }}",
+              "type": "array"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000220",
+              "name": "paragraph",
+              "value": "",
+              "type": "string"
+            },
+            {
+              "id": "5e7e0000-0000-4000-8000-000000000221",
+              "name": "closing",
+              "value": "We look forward to welcoming you at the airport.",
               "type": "string"
             }
           ]

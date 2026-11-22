@@ -37,8 +37,23 @@ test('meeting time is refused with complete', () => {
 });
 
 test('actions of later milestones do not exist yet', () => {
-  for (const action of ['add_note', 'confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change', '', undefined, 1]) {
+  for (const action of ['add_note', '', undefined, 1]) {
     assert.equal(validateDecisionBody({ order_id: ID, action }).error, 'Unknown action.');
+  }
+});
+
+test('M5 actions are accepted', () => {
+  for (const action of ['confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change']) {
+    assert.deepEqual(validateDecisionBody({ order_id: ID, action }).value,
+      { order_id: ID.toLowerCase(), action, final_time: null }, action);
+  }
+});
+
+test('meeting time: allowed with approve_flight_change, refused with the other M5 actions', () => {
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'approve_flight_change', final_time: '2026-12-10T11:45:00Z' })
+    .value.final_time.toISOString(), '2026-12-10T11:45:00.000Z');
+  for (const action of ['confirm_flight_missing', 'ignore_flight_change']) {
+    assert.ok(validateDecisionBody({ order_id: ID, action, final_time: '2026-12-10T11:45:00Z' }).error, action);
   }
 });
 

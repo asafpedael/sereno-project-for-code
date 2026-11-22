@@ -1,7 +1,10 @@
 // Tests for the customer email events in lib/notify.js. Run: node --test
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { notify, approvedEmailPayload, rejectedEmailPayload } from '../lib/notify.js';
+import {
+  notify, approvedEmailPayload, rejectedEmailPayload, clarificationEmailPayload, flightChangeEmailPayload,
+} from '../lib/notify.js';
+import { fixedClarificationParagraph } from '../lib/prompts.js';
 
 function row(overrides = {}) {
   return {
@@ -60,8 +63,54 @@ test('rejected email: name, reference and flight only', () => {
   });
 });
 
+const missing = (overrides = {}) => row({
+  status: 'needs_clarification', flight: null, flight_no_submitted: 'LY315',
+  flight_date_submitted: '2026-12-12', final_time: null, ai_output: null, ...overrides,
+});
+
+test('rejected email for a typed flight: the typed number and date', () => {
+  const payload = rejectedEmailPayload(missing({ status: 'rejected' }));
+  assert.equal(payload.flight_no, 'LY315');
+  assert.equal(payload.destination, null);
+  assert.equal(payload.departure_local, '12 Dec 2026');
+  assert.equal(rejectedEmailPayload(missing({ flight_date_submitted: null })).departure_local, null);
+});
+
+test('clarification email: typed number and date and the saved paragraph', () => {
+  assert.deepEqual(clarificationEmailPayload(missing(), 'Please check your flight.'), {
+    type: 'customer_clarification',
+    to: 'daniel@example.com',
+    customer_name: 'Daniel A.',
+    reference: 'A1B2C3D4',
+    flight_no: 'LY315',
+    departure_local: '12 Dec 2026',
+    ai_paragraph: 'Please check your flight.',
+  });
+});
+
+test('flight change email: new meeting time, previous kept in the event, no AI paragraph', () => {
+  const payload = flightChangeEmailPayload(
+    row({ final_time: '2026-12-10T11:40:00+00:00', flight: { flight_no: 'DM101', destination: 'London', departure_at: '2026-12-10T13:30:00+00:00' } }),
+    '2026-12-10T10:40:00+00:00');
+  assert.equal(payload.type, 'customer_flight_change');
+  assert.equal(payload.departure_local, '10 Dec 2026, 15:30');
+  assert.equal(payload.meeting_time_local, '10 Dec 2026, 13:40');
+  assert.equal(payload.previous_meeting_time_local, '10 Dec 2026, 12:40');
+  assert.equal(payload.ai_paragraph, '');
+});
+
+test('fixed clarification paragraph, with and without a date (D11)', () => {
+  assert.equal(fixedClarificationParagraph('LY315', '12 Dec 2026'),
+    'We could not find flight LY315 on 12 Dec 2026 in our schedule. Please check your flight number and departure date, and send a new request with the correct details. We will be glad to help.');
+  assert.equal(fixedClarificationParagraph('DM999', null),
+    'We could not find flight DM999 in our schedule. Please check your flight number and departure date, and send a new request with the correct details. We will be glad to help.');
+});
+
 test('customer emails never carry manager notes, customer notes or the phone', () => {
-  for (const payload of [approvedEmailPayload(row()), rejectedEmailPayload(row())]) {
+  for (const payload of [
+    approvedEmailPayload(row()), rejectedEmailPayload(row()),
+    clarificationEmailPayload(missing(), 'x'), flightChangeEmailPayload(row(), '2026-12-10T10:00:00Z'),
+  ]) {
     const text = JSON.stringify(payload);
     for (const secret of ['Secret note for the agent', 'One oversized bag.', '050-1110001']) {
       assert.ok(!text.includes(secret), `${secret} must not be in ${payload.type}`);

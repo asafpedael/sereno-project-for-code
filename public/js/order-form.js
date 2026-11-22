@@ -2,7 +2,7 @@
 // Form values live in the page (the step sections are only hidden), so Back never loses data.
 import { getJson, postJson } from './api.js';
 import { el, clear } from './dom.js';
-import { formatTimeIL, formatDateIL, formatDateTimeIL, isSameDayIL } from './time.js';
+import { formatTimeIL, formatDateIL, formatDateTimeIL, isSameDayIL, toIsraelInputs } from './time.js';
 import { meetingTime } from './meeting-time.js';
 
 const STEPS = 4;
@@ -15,6 +15,7 @@ const $ = (id) => document.getElementById(id);
 const state = {
   step: 1,
   flight: null, // { id, flight_no, airline, destination, departure_at }
+  manual: false, // true when the customer types the flight instead of choosing it
   submitting: false,
 };
 
@@ -139,6 +140,100 @@ searchInput.addEventListener('keydown', (event) => {
   }
 });
 
+// ---------- Step 1: manual flight entry (same rules as the server) ----------
+
+const manualNoInput = $('manual-flight-no');
+const manualDateInput = $('manual-flight-date');
+const MANUAL_NO_RE = /^[A-Za-z0-9 -]+$/;
+const MAX_DAYS_AHEAD = 365;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+// "LY315" from "ly 315" (upper case, spaces and '-' removed).
+function normalizeFlightNo(text) {
+  return text.replace(/[ -]/g, '').toUpperCase();
+}
+
+// "YYYY-MM-DD" moved by a number of days (plain calendar dates, no time zone).
+function addDays(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// "12 Dec 2026" from "2026-12-12".
+function formatDateOnly(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
+}
+
+function isRealDate(dateStr) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
+function manualDateLimits() {
+  const today = toIsraelInputs(new Date()).date;
+  return { min: today, max: addDays(today, MAX_DAYS_AHEAD) };
+}
+
+function setManualMode(manual) {
+  state.manual = manual;
+  $('flight-list-mode').hidden = manual;
+  $('flight-manual-mode').hidden = !manual;
+  if (manual) {
+    clearSelectedFlight();
+    searchInput.value = '';
+    searchStatus.textContent = '';
+    resultsBox.hidden = true;
+    clearFieldError('field-flight', 'flight-error', [searchInput]);
+    const { min, max } = manualDateLimits();
+    manualDateInput.min = min;
+    manualDateInput.max = max;
+    manualNoInput.focus();
+  } else {
+    manualNoInput.value = '';
+    manualDateInput.value = '';
+    clearFieldError('field-flight-no', 'flight-no-error', [manualNoInput]);
+    clearFieldError('field-flight-date', 'flight-date-error', [manualDateInput]);
+    searchFlights();
+    searchInput.focus();
+  }
+}
+
+$('btn-manual').addEventListener('click', () => setManualMode(true));
+$('btn-search').addEventListener('click', () => setManualMode(false));
+manualNoInput.addEventListener('input', () => clearFieldError('field-flight-no', 'flight-no-error', [manualNoInput]));
+manualDateInput.addEventListener('input', () => clearFieldError('field-flight-date', 'flight-date-error', [manualDateInput]));
+
+// Returns the problem inputs (empty when both fields are fine).
+function validateManualFlight() {
+  const problems = [];
+  const raw = manualNoInput.value;
+  const normalized = normalizeFlightNo(raw);
+  let noError = null;
+  if (raw.trim() === '') noError = 'Please enter your flight number.';
+  else if (!MANUAL_NO_RE.test(raw) || normalized.length < 2 || normalized.length > 10) {
+    noError = 'Enter a flight number with letters and digits only.';
+  }
+  if (noError) {
+    showFieldError('field-flight-no', 'flight-no-error', [manualNoInput], noError);
+    problems.push(manualNoInput);
+  }
+
+  const date = manualDateInput.value;
+  const { min, max } = manualDateLimits();
+  let dateError = null;
+  if (!isRealDate(date)) dateError = 'Please choose your departure date.';
+  else if (date < min) dateError = 'Choose a date from today on.';
+  else if (date > max) dateError = 'Choose a date within the next 12 months.';
+  if (dateError) {
+    showFieldError('field-flight-date', 'flight-date-error', [manualDateInput], dateError);
+    problems.push(manualDateInput);
+  }
+  return problems;
+}
+
 // ---------- Step 2: travellers, bags, services, meeting time ----------
 
 const LIMITS = { travelers: { min: 1, max: 10 }, bags: { min: 0, max: 10 } };
@@ -168,6 +263,16 @@ function updateMeetingTime() {
   const dateEl = $('meeting-date');
   const travelers = readCount('travelers');
   const bags = readCount('bags');
+  // A typed flight has no known departure yet: the box shows a note instead of a time.
+  const manual = state.manual;
+  timeEl.hidden = manual;
+  $('meeting-note').hidden = manual;
+  $('meeting-manual').hidden = !manual;
+  if (manual) {
+    dateEl.hidden = true;
+    panel.hidden = false;
+    return;
+  }
   if (!state.flight || travelers === null || bags === null) {
     panel.hidden = true;
     return;
@@ -237,7 +342,11 @@ function charLength(text) {
 }
 
 const STEP_FIELDS = {
-  1: [['field-flight', 'flight-error', () => [searchInput]]],
+  1: [
+    ['field-flight', 'flight-error', () => [searchInput]],
+    ['field-flight-no', 'flight-no-error', () => [manualNoInput]],
+    ['field-flight-date', 'flight-date-error', () => [manualDateInput]],
+  ],
   2: [['field-travelers', 'travelers-error', () => [travelersInput]], ['field-bags', 'bags-error', () => [bagsInput]]],
   3: [['field-escort', 'escort-error', () => []]],
   4: DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
@@ -248,7 +357,9 @@ function validateStep(step) {
   // Start clean, so only the current problems are shown.
   for (const [fieldId, errorId, inputs] of STEP_FIELDS[step]) clearFieldError(fieldId, errorId, inputs());
 
-  if (step === 1 && !state.flight) {
+  if (step === 1 && state.manual) {
+    problems.push(...validateManualFlight());
+  } else if (step === 1 && !state.flight) {
     showFieldError('field-flight', 'flight-error', [searchInput], 'Please select your flight from the list.');
     problems.push(searchInput);
   }
@@ -348,9 +459,9 @@ async function submitOrder() {
   btnNextLabel.textContent = 'Sending…';
 
   const payload = {
-    flight_id: state.flight.id,
-    flight_no: state.flight.flight_no,
-    flight_date: null,
+    flight_id: state.manual ? null : state.flight.id,
+    flight_no: state.manual ? manualNoInput.value.trim() : state.flight.flight_no,
+    flight_date: state.manual ? manualDateInput.value : null,
     travelers: readCount('travelers'),
     bags: readCount('bags'),
     services: selectedServices(),
@@ -378,7 +489,9 @@ async function submitOrder() {
 function showReceived(reference) {
   const flight = state.flight;
   $('received-reference').textContent = reference;
-  $('received-flight').textContent = `${flightLabel(flight)} · ${formatDateTimeIL(flight.departure_at)}`;
+  $('received-flight').textContent = state.manual
+    ? `${normalizeFlightNo(manualNoInput.value)} · ${formatDateOnly(manualDateInput.value)}`
+    : `${flightLabel(flight)} · ${formatDateTimeIL(flight.departure_at)}`;
   form.hidden = true;
   form.reset();
   state.flight = null;

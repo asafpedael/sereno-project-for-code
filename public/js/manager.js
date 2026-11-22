@@ -11,6 +11,8 @@ const BEFORE_DEPARTURE = 'Meeting time must be before departure';
 const MISSING_TIME = 'Please enter a date and time.';
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 const EMAIL_NOT_SENT = 'Decision saved, but the email to the customer was not sent.';
+const CHANGE_EMAIL_NOT_SENT = 'Change saved, but the email to the customer was not sent.';
+const CLARIFICATION_NOT_SENT = 'The clarification email was not sent. Please try again.';
 
 const session = requireRole('manager');
 
@@ -36,6 +38,9 @@ let selectedId = null;
 // A just-decided order whose customer email was not sent: it left the list but stays open
 // in the details with the warning, so the manager sees it (DESIGN, decision 10).
 let heldOrder = null;
+let heldMessage = '';
+// Id of the missing-flight order whose clarification email just failed (shown until the next action).
+let clarificationWarning = null;
 
 function labelMap(list) {
   return Object.fromEntries((list || []).map((item) => [item.code, item.label]));
@@ -44,6 +49,19 @@ function labelMap(list) {
 function statusTag(status) {
   const tag = STATUS_TAGS[status] || { label: status, className: 'tag tag-pending' };
   return el('span', { className: tag.className }, tag.label);
+}
+
+// An approved order whose flight moved shows "Flight time changed" instead of "Approved".
+function orderTag(order) {
+  if (order.flight_change_pending) return el('span', { className: 'tag tag-dark' }, 'Flight time changed');
+  return statusTag(order.status);
+}
+
+// "12 Dec 2026" from "2026-12-12".
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function formatDateOnly(dateStr) {
+  const [y, m, d] = String(dateStr).split('-').map(Number);
+  return `${d} ${MONTHS[m - 1]} ${y}`;
 }
 
 function plural(n, word) {
@@ -70,15 +88,16 @@ function renderList() {
   clear(listNode);
   listEmpty.hidden = orders.length > 0;
   for (const order of orders) {
-    const destination = order.flight.destination || 'Flight not found';
+    const sub = order.status === 'needs_clarification'
+      ? `Flight not found · ${plural(order.travelers, 'traveller')}`
+      : `${order.flight.destination || 'Flight not found'} · ${departureText(order)} · ${plural(order.travelers, 'traveller')}`;
     const button = el('button', {
       className: 'order-item',
       attrs: { type: 'button', 'aria-pressed': String(order.id === selectedId), 'data-id': order.id },
     },
     el('span', { className: 'order-item__title' }, `${order.customer.full_name} · ${order.flight.flight_no}`),
-    el('span', { className: 'order-item__sub' },
-      `${destination} · ${departureText(order)} · ${plural(order.travelers, 'traveller')}`),
-    el('span', { className: 'order-item__tags' }, statusTag(order.status)));
+    el('span', { className: 'order-item__sub' }, sub),
+    el('span', { className: 'order-item__tags' }, orderTag(order)));
     button.addEventListener('click', () => {
       selectOrder(order.id);
       // One-column layout (phone): bring the details into view below the list.
@@ -136,10 +155,11 @@ function renderDetails() {
     : order.flight.flight_no;
   const escortText = labels.escort_scopes[order.escort_scope] || order.escort_scope;
 
+  const missing = order.status === 'needs_clarification';
   detailsNode.append(
     el('div', { className: 'details__head' },
       el('h2', { className: 'h3' }, `Order ${order.reference}`),
-      statusTag(order.status)),
+      orderTag(order)),
     el('div', { className: 'details-grid' },
       dataItem('Customer', order.customer.full_name),
       dataItem('Phone / Email', `${order.customer.phone} · ${order.customer.email}`),
@@ -149,14 +169,201 @@ function renderDetails() {
       dataItem('Services · Escort', `${servicesText(order)} · ${escortText}`)),
     el('div', { className: 'details-panels' },
       panel('Customer notes', order.customer_notes || 'No notes'),
-      aiPanel(order)),
+      // No AI box for a missing flight (DESIGN): the flight panel takes its place.
+      missing ? missingFlightPanel(order) : order.flight_change_pending ? flightChangePanel(order) : aiPanel(order)),
   );
   if (order === heldOrder) {
     detailsNode.append(el('div', { className: 'decision' },
-      el('p', { className: 'alert-error', attrs: { role: 'alert' } }, EMAIL_NOT_SENT)));
+      el('p', { className: 'alert-error', attrs: { role: 'alert' } }, heldMessage)));
   } else if (order.status === 'pending') {
     detailsNode.append(decisionArea(order));
+  } else if (missing) {
+    detailsNode.append(clarificationArea(order));
+  } else if (order.flight_change_pending) {
+    detailsNode.append(flightChangeArea(order));
   }
+}
+
+// ---------- Exceptions (M5): missing flight and flight time changed ----------
+
+function missingFlightPanel(order) {
+  const typed = order.submitted_flight || { flight_no: order.flight.flight_no, date: null };
+  return el('div', { className: 'panel stack' },
+    el('h3', { className: 'panel__title' }, 'Flight not found in our schedule'),
+    el('div', { className: 'details-grid' },
+      dataItem('Flight number entered', typed.flight_no),
+      dataItem('Departure date entered', typed.date ? formatDateOnly(typed.date) : 'Not given')));
+}
+
+function flightChangePanel(order) {
+  return el('div', { className: 'panel stack' },
+    el('h3', { className: 'panel__title' }, 'Flight time changed'),
+    el('div', { className: 'details-grid' },
+      dataItem('Previous departure', formatDayTimeIL(order.previous_departure_at)),
+      dataItem('New departure', formatDayTimeIL(order.flight.departure_at))));
+}
+
+// The shared error handling of every decision request.
+async function handleDecisionError(err, { showFieldError, showFormError }) {
+  if (err.status === 401) return; // going to the login page
+  if (err.status === 400 && err.message === BEFORE_DEPARTURE && showFieldError) showFieldError(BEFORE_DEPARTURE);
+  else if (err.status === 409) {
+    setStatus(`${err.message} The list was refreshed.`, { error: true });
+    await loadOrders();
+  } else showFormError(err.message || GENERIC_MESSAGE);
+}
+
+// Missing flight: Reject or Confirm flight missing. Once the clarification email was sent,
+// the line "Clarification email sent" replaces the primary button and the order stays.
+function clarificationArea(order) {
+  const formError = el('p', { className: 'alert-error', attrs: { role: 'alert', hidden: '' } });
+  if (clarificationWarning === order.id) {
+    formError.textContent = CLARIFICATION_NOT_SENT;
+    formError.hidden = false;
+  }
+  const rejectButton = el('button', { className: 'btn btn-secondary', attrs: { type: 'button' } }, 'Reject');
+  const sent = order.clarification && order.clarification.sent;
+  const confirmButton = sent
+    ? null
+    : el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Confirm flight missing');
+  const buttons = [rejectButton, confirmButton].filter(Boolean);
+  const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
+
+  async function send(action) {
+    formError.hidden = true;
+    clarificationWarning = null;
+    for (const b of buttons) b.disabled = true;
+    try {
+      const data = await staffPost('/api/order-decision', { order_id: order.id, action });
+      if (action === 'reject') {
+        if (data.email_sent) {
+          setStatus(`Order ${order.reference} rejected. Email sent to the customer.`);
+          removeOrder(order.id);
+        } else {
+          setStatus(`Order ${order.reference} rejected.`);
+          holdOrder(data.order, EMAIL_NOT_SENT);
+        }
+        return;
+      }
+      // Confirm flight missing: the order stays in the list, updated.
+      if (data.email_sent) setStatus(`Clarification email sent for order ${order.reference}.`);
+      else {
+        setStatus('');
+        clarificationWarning = order.id;
+      }
+      replaceOrder(data.order);
+    } catch (err) {
+      await handleDecisionError(err, { showFormError });
+    } finally {
+      for (const b of buttons) b.disabled = false;
+    }
+  }
+
+  rejectButton.addEventListener('click', () => send('reject'));
+  if (confirmButton) confirmButton.addEventListener('click', () => send('confirm_flight_missing'));
+
+  return el('div', { className: 'decision' },
+    el('div', { className: 'decision__actions' }, formError,
+      el('div', { className: 'decision__buttons' },
+        rejectButton,
+        sent ? el('p', { className: 'decision__done' }, 'Clarification email sent') : confirmButton)));
+}
+
+// Flight time changed: the meeting time is filled with the new recommended time and can be
+// edited; Ignore or Approve change. After either, the order leaves the list.
+function flightChangeArea(order) {
+  const meeting = meetingField(order.new_recommended_time, order.flight.departure_at);
+  const formError = el('p', { className: 'alert-error', attrs: { role: 'alert', hidden: '' } });
+  const ignoreButton = el('button', { className: 'btn btn-secondary', attrs: { type: 'button' } }, 'Ignore');
+  const approveButton = el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Approve change');
+  const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
+
+  async function send(body) {
+    meeting.clearErrors();
+    formError.hidden = true;
+    ignoreButton.disabled = true;
+    approveButton.disabled = true;
+    try {
+      const data = await staffPost('/api/order-decision', body);
+      if (body.action === 'ignore_flight_change') {
+        setStatus(`Flight change ignored for order ${order.reference}.`);
+        removeOrder(order.id);
+      } else if (data.email_sent) {
+        setStatus(`Order ${order.reference} updated. Email sent to the customer.`);
+        removeOrder(order.id);
+      } else {
+        setStatus(`Order ${order.reference} updated.`);
+        holdOrder(data.order, CHANGE_EMAIL_NOT_SENT);
+      }
+    } catch (err) {
+      await handleDecisionError(err, { showFieldError: meeting.showFieldError, showFormError });
+    } finally {
+      ignoreButton.disabled = false;
+      approveButton.disabled = false;
+    }
+  }
+
+  approveButton.addEventListener('click', () => {
+    const chosen = meeting.read();
+    if (chosen.error) return meeting.showFieldError(chosen.error);
+    const body = { order_id: order.id, action: 'approve_flight_change' };
+    if (chosen.iso) body.final_time = chosen.iso;
+    return send(body);
+  });
+  ignoreButton.addEventListener('click', () => send({ order_id: order.id, action: 'ignore_flight_change' }));
+
+  return el('div', { className: 'decision' },
+    meeting.node,
+    el('div', { className: 'decision__actions' }, formError,
+      el('div', { className: 'decision__buttons' }, ignoreButton, approveButton)));
+}
+
+// "Meeting time" date + time inputs filled with a recommended time, with the hint
+// "Recommended HH:MM". read() gives { iso: null } when unchanged (the server then uses the
+// current recommended time), { iso } when changed, or { error }.
+function meetingField(recommendedIso, departureIso) {
+  const initial = recommendedIso ? toIsraelInputs(recommendedIso) : { date: '', time: '' };
+  const dateInput = el('input', {
+    className: 'input', attrs: { type: 'date', id: 'meeting-date', 'aria-label': 'Meeting date', 'aria-describedby': 'meeting-hint meeting-error' },
+  });
+  const timeInput = el('input', {
+    className: 'input', attrs: { type: 'time', id: 'meeting-time', 'aria-label': 'Meeting time of day', 'aria-describedby': 'meeting-hint meeting-error' },
+  });
+  dateInput.value = initial.date;
+  timeInput.value = initial.time;
+  const fieldError = el('p', { className: 'field__error', attrs: { id: 'meeting-error', hidden: '' } });
+  const hint = recommendedIso
+    ? `Recommended ${departureIso && isSameDayIL(recommendedIso, departureIso) ? '' : `${formatDateIL(recommendedIso)} `}${formatTimeIL(recommendedIso)}`
+    : '';
+  const node = el('fieldset', { className: 'field meeting-field' },
+    el('legend', { className: 'fieldset__legend' }, 'Meeting time'),
+    el('div', { className: 'meeting-field__inputs' }, dateInput, timeInput),
+    el('p', { className: 'field__hint', attrs: { id: 'meeting-hint' } }, hint),
+    fieldError);
+
+  return {
+    node,
+    showFieldError(message) {
+      fieldError.textContent = message;
+      fieldError.hidden = false;
+      node.classList.add('is-invalid');
+      dateInput.setAttribute('aria-invalid', 'true');
+      timeInput.setAttribute('aria-invalid', 'true');
+    },
+    clearErrors() {
+      fieldError.hidden = true;
+      node.classList.remove('is-invalid');
+      dateInput.removeAttribute('aria-invalid');
+      timeInput.removeAttribute('aria-invalid');
+    },
+    read() {
+      if (dateInput.value === initial.date && timeInput.value === initial.time) return { iso: null };
+      const iso = israelInputToIso(dateInput.value, timeInput.value);
+      if (!iso) return { error: MISSING_TIME };
+      if (Date.parse(iso) >= Date.parse(departureIso)) return { error: BEFORE_DEPARTURE };
+      return { iso };
+    },
+  };
 }
 
 // ---------- Decision: meeting time, Reject, Approve ----------
@@ -222,7 +429,7 @@ function decisionArea(order) {
         removeOrder(order.id);
       } else {
         setStatus(`Order ${order.reference} ${verb}.`);
-        holdOrder(data.order);
+        holdOrder(data.order, EMAIL_NOT_SENT);
       }
     } catch (err) {
       if (err.status === 401) return; // going to the login page
@@ -264,10 +471,19 @@ function removeOrder(id) {
   renderDetails();
 }
 
+// After "Confirm flight missing": the order stays in the list with its new state.
+function replaceOrder(updated) {
+  orders = orders.map((o) => (o.id === updated.id ? updated : o));
+  selectedId = updated.id;
+  renderList();
+  renderDetails();
+}
+
 // After a decision whose email was not sent: drop it from the list, keep it open with the warning.
-function holdOrder(decided) {
+function holdOrder(decided, message) {
   orders = orders.filter((o) => o.id !== decided.id);
   heldOrder = decided;
+  heldMessage = message;
   selectedId = decided.id;
   renderList();
   renderDetails();

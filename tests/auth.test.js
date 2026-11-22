@@ -31,7 +31,8 @@ test('bearer token is read only from a well-formed Authorization header', () => 
 
 test('order decisions: the agent may only complete, the manager everything but complete', () => {
   assert.equal(roleMayDecide('agent', 'complete'), true);
-  for (const action of ['approve', 'reject', 'add_note', undefined, '']) {
+  for (const action of ['approve', 'reject', 'add_note', 'confirm_flight_missing',
+    'approve_flight_change', 'ignore_flight_change', undefined, '']) {
     assert.equal(roleMayDecide('agent', action), false);
   }
   assert.equal(roleMayDecide('manager', 'complete'), false);

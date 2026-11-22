@@ -1,4 +1,5 @@
-// POST /api/submit-order: public order form submission. Creates an order with status "pending".
+// POST /api/submit-order: public order form submission. Creates an order with status "pending",
+// or "needs_clarification" when a typed flight is not found.
 // Replies only with a reference code and the status, never with stored data.
 import { randomBytes } from 'node:crypto';
 import { getSupabase } from '../lib/supabase.js';
@@ -6,7 +7,7 @@ import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
 import { notify } from '../lib/notify.js';
-import { formatLocalIL } from '../lib/time.js';
+import { formatLocalIL, formatDateOnly, israelDayRange } from '../lib/time.js';
 import { generateOrderDraft } from '../lib/ai.js';
 import { buildOrderDraftInput } from '../lib/prompts.js';
 import lists from '../data/lists.json' with { type: 'json' };
@@ -67,6 +68,25 @@ async function findOrCreateCustomerId(order) {
   throw error;
 }
 
+// A typed flight (plan D2): exact number (stored upper case) on the Israel day of the typed
+// date, departure still in the future; the earliest if there are several. Null when none.
+async function findTypedFlight(flightNo, flightDate) {
+  const day = israelDayRange(flightDate);
+  if (!day) return null;
+  const nowIso = new Date().toISOString();
+  const { data, error } = await getSupabase()
+    .from('flights')
+    .select('id, flight_no, destination, departure_at')
+    .eq('flight_no', flightNo)
+    .gte('departure_at', day.start)
+    .lt('departure_at', day.end)
+    .gt('departure_at', nowIso)
+    .order('departure_at', { ascending: true })
+    .limit(1);
+  if (error) throw error;
+  return data && data.length > 0 ? data[0] : null;
+}
+
 export default withHandler(['POST'], async (req, res) => {
   const body = readBody(req);
 
@@ -92,30 +112,38 @@ export default withHandler(['POST'], async (req, res) => {
     return sendError(res, 429, 'too_many_requests', TOO_MANY_MESSAGE);
   }
 
-  // 4. Flight: must exist and must not have departed
-  const { data: flight, error: flightError } = await getSupabase()
-    .from('flights')
-    .select('id, flight_no, destination, departure_at')
-    .eq('id', order.flight_id)
-    .maybeSingle();
-  if (flightError) throw flightError;
-  if (!flight) return sendError(res, 400, 'bad_request', 'Please select your flight from the list.');
-  const departure = new Date(flight.departure_at);
-  if (departure.getTime() <= Date.now()) {
-    return sendError(res, 400, 'bad_request', 'This flight has already departed. Please choose another flight.');
+  // 4. Flight. From the list: must exist and must not have departed.
+  //    Typed: looked up by number and Israel day; not found -> "needs_clarification".
+  let flight;
+  if (order.flight_id) {
+    const { data, error: flightError } = await getSupabase()
+      .from('flights')
+      .select('id, flight_no, destination, departure_at')
+      .eq('id', order.flight_id)
+      .maybeSingle();
+    if (flightError) throw flightError;
+    if (!data) return sendError(res, 400, 'bad_request', 'Please select your flight from the list.');
+    if (new Date(data.departure_at).getTime() <= Date.now()) {
+      return sendError(res, 400, 'bad_request', 'This flight has already departed. Please choose another flight.');
+    }
+    flight = data;
+  } else {
+    flight = await findTypedFlight(order.flight_no, order.flight_date);
   }
+  const departure = flight ? new Date(flight.departure_at) : null;
 
   // 5. Customer
   const customerId = knownCustomerId || await findOrCreateCustomerId(order);
 
-  // 6. Meeting time, always computed here (a value sent by the page is never used)
-  const recommended = meetingTime(departure, order.travelers, order.bags);
+  // 6. Meeting time, always computed here (a value sent by the page is never used).
+  //    No meeting time when the typed flight was not found.
+  const recommended = flight ? meetingTime(departure, order.travelers, order.bags) : null;
 
-  // 7. Order: inserted with status "pending" only if the hourly limits still allow it
+  // 7. Order: inserted only if the hourly limits still allow it
   const { data: rows, error: insertError } = await getSupabase().rpc('insert_order_with_limits', {
     p_customer_id: customerId,
-    p_flight_id: flight.id,
-    p_flight_no: flight.flight_no,
+    p_flight_id: flight ? flight.id : null,
+    p_flight_no: flight ? flight.flight_no : order.flight_no,
     p_contact_name: order.full_name,
     p_contact_phone: order.phone,
     p_travelers: order.travelers,
@@ -123,9 +151,11 @@ export default withHandler(['POST'], async (req, res) => {
     p_services: order.services,
     p_escort_scope: order.escort_scope,
     p_customer_notes: order.notes,
-    p_recommended: recommended.toISOString(),
+    p_recommended: recommended ? recommended.toISOString() : null,
     p_max_per_customer: MAX_ORDERS_PER_EMAIL_PER_HOUR,
     p_max_total: MAX_ORDERS_PER_HOUR,
+    p_flight_date: order.flight_date,
+    p_status: flight ? 'pending' : 'needs_clarification',
   });
   if (insertError) throw insertError;
   if (!rows || rows.length === 0) {
@@ -137,10 +167,13 @@ export default withHandler(['POST'], async (req, res) => {
 
   // 8. AI order_draft (FR-17): a personal paragraph for the approval email, checked in code.
   //    The order is already saved: an AI failure only stores { status: 'failed' }.
-  const aiOutput = await generateOrderDraft(buildOrderDraftInput(order, flight));
-  const { error: aiSaveError } = await getSupabase()
-    .from('orders').update({ ai_output: aiOutput }).eq('id', saved.id);
-  if (aiSaveError) console.error(`submit-order: ai_output not saved (${aiSaveError.code || 'no code'})`);
+  //    No draft for a flight that was not found (ai_output stays empty).
+  if (flight) {
+    const aiOutput = await generateOrderDraft(buildOrderDraftInput(order, flight));
+    const { error: aiSaveError } = await getSupabase()
+      .from('orders').update({ ai_output: aiOutput }).eq('id', saved.id);
+    if (aiSaveError) console.error(`submit-order: ai_output not saved (${aiSaveError.code || 'no code'})`);
+  }
 
   // 9. Alert the manager through n8n (FR-14). The order is already saved, so a failed
   //    alert is only logged and the customer still gets success.
@@ -148,17 +181,18 @@ export default withHandler(['POST'], async (req, res) => {
     type: 'manager_alert',
     reference,
     customer_name: order.full_name,
-    flight_no: flight.flight_no,
-    destination: flight.destination,
-    departure_local: formatLocalIL(departure),
-    meeting_time_local: formatLocalIL(recommended),
+    flight_no: flight ? flight.flight_no : order.flight_no,
+    destination: flight ? flight.destination : null,
+    departure_local: flight ? formatLocalIL(departure) : formatDateOnly(order.flight_date),
+    meeting_time_local: recommended ? formatLocalIL(recommended) : null,
     travelers: order.travelers,
     bags: order.bags,
     services: order.services.map((code) => SERVICE_LABELS[code] || code),
     escort_scope: ESCORT_LABELS[order.escort_scope] || order.escort_scope,
-    needs_clarification: false,
+    needs_clarification: !flight,
   });
 
-  // 10. Reply: reference and status only
+  // 10. Reply: reference and status only. Always "pending" for the customer, also when
+  //     the typed flight was not found (the customer is not told).
   sendOk(res, { reference, status: 'pending' });
 });

@@ -105,6 +105,8 @@
 .decision__actions { display: flex; flex-direction: column; gap: var(--space-2); }
 .decision__buttons { display: flex; justify-content: flex-end; gap: 12px; }
 .decision__buttons .btn { min-width: 120px; }
+/* "Clarification email sent": takes the primary button's place (M5). */
+.decision__done { display: flex; align-items: center; font-weight: 700; font-size: var(--fs-small); color: var(--color-ink-soft); }
 @media (max-width: 480px) { .decision__buttons .btn { flex: 1; min-width: 0; } }
 
 /* ---------- Simple staff page body ---------- */

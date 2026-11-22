@@ -33,6 +33,7 @@
         <!-- Step 1: Flight -->
         <section class="form-step stack-lg" data-step="1" aria-labelledby="heading-1">
           <h1 class="h3 step-heading" id="heading-1" tabindex="-1">Select your flight</h1>
+          <div class="stack-lg" id="flight-list-mode">
           <div class="field" id="field-flight">
             <label class="field__label" for="flight-search">Search by flight number or destination</label>
             <input class="input" id="flight-search" type="search" maxlength="40" autocomplete="off"
@@ -44,6 +45,26 @@
           <div class="field">
             <label class="field__label" for="departure-time">Departure time</label>
             <input class="input" id="departure-time" type="text" readonly placeholder="Auto-filled from flight">
+          </div>
+          <p><button class="link-button" type="button" id="btn-manual">Can't find your flight? Enter it manually</button></p>
+          </div>
+
+          <!-- Manual entry: shown instead of the search when the flight is not in the list -->
+          <div class="stack-lg" id="flight-manual-mode" hidden>
+            <div class="field" id="field-flight-no">
+              <label class="field__label" for="manual-flight-no">Flight number</label>
+              <input class="input" id="manual-flight-no" type="text" maxlength="20" autocomplete="off"
+                     autocapitalize="characters" spellcheck="false" placeholder="e.g. LY315"
+                     aria-describedby="flight-no-error">
+              <p class="field__error" id="flight-no-error" hidden></p>
+            </div>
+            <div class="field" id="field-flight-date">
+              <label class="field__label" for="manual-flight-date">Departure date</label>
+              <input class="input" id="manual-flight-date" type="date" aria-describedby="flight-date-error">
+              <p class="field__error" id="flight-date-error" hidden></p>
+            </div>
+            <p class="text-soft">Our team will check your flight and get back to you.</p>
+            <p><button class="link-button" type="button" id="btn-search">Back to search</button></p>
           </div>
         </section>
 
@@ -83,7 +104,8 @@
             <p class="panel-dark__label">Suggested meeting time</p>
             <p class="panel-dark__time" id="meeting-time"></p>
             <p class="panel-dark__date" id="meeting-date" hidden></p>
-            <p class="panel-dark__note">Suggestion only. Subject to manager approval.</p>
+            <p class="panel-dark__note" id="meeting-note">Suggestion only. Subject to manager approval.</p>
+            <p class="panel-dark__manual" id="meeting-manual" hidden>We will confirm your meeting time after checking your flight.</p>
           </div>
         </section>
 

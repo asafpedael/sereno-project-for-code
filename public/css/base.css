@@ -296,6 +296,7 @@ a:hover { color: var(--color-deep-navy); }
   color: var(--color-gold);
 }
 .panel-dark__note { font-size: var(--fs-small); color: var(--color-on-dark-soft); }
+.panel-dark__manual { margin-top: 6px; color: var(--color-cream); }
 
 .ruled-card { border-top: 2px solid var(--color-gold); padding-top: var(--space-2); }
 
