@@ -63,6 +63,8 @@
 
   /* Shapes and sizes */
   --radius: 2px;
+  --radius-button: 8px;           /* buttons, softly rounded (Asaf, 22.11.2026) */
+  --radius-field: 8px;            /* fields and choice boxes, softly rounded (Asaf, 22.11.2026) */
   --control-height: 54px;
   --control-height-small: 46px;
   --rule-width: 1px;

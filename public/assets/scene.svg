@@ -1,0 +1,69 @@
+<!-- Terminal windows at sunset: the Sereno scene behind the home page hero and beside the customer and staff sign-in screens (Asaf, 22.11.2026). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#151d2a"/>
+      <stop offset="0.38" stop-color="#2a3140"/>
+      <stop offset="0.6" stop-color="#6e5640"/>
+      <stop offset="0.7" stop-color="#c79253"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="1130" cy="660" r="520" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f1c27a" stop-opacity="0.85"/>
+      <stop offset="0.35" stop-color="#d79a55" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#d79a55" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b2c33"/>
+      <stop offset="1" stop-color="#121821"/>
+    </linearGradient>
+    <linearGradient id="reflection" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f1c27a" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#f1c27a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="700" fill="url(#sky)"/>
+  <rect width="1600" height="700" fill="url(#glow)"/>
+  <g fill="#f6f1e8" opacity="0.12">
+    <rect x="300" y="378" width="1300" height="3"/>
+    <rect x="380" y="426" width="1220" height="3"/>
+    <rect x="260" y="476" width="1340" height="4"/>
+    <rect x="420" y="524" width="1180" height="3"/>
+    <rect x="340" y="574" width="1260" height="4"/>
+  </g>
+  <g transform="translate(882 252) rotate(-14)" fill="#151d2a">
+    <ellipse cx="0" cy="0" rx="52" ry="5"/>
+    <path d="M-4 0 L-24 -24 L-14 -24 L16 0 Z"/>
+    <path d="M-4 0 L-24 20 L-14 20 L16 0 Z"/>
+    <path d="M-42 0 L-54 -13 L-47 -13 L-34 0 Z"/>
+  </g>
+  <circle cx="1130" cy="656" r="30" fill="#f6ead2"/>
+  <path d="M0 694 L180 684 L340 690 L520 676 L700 686 L880 670 L1000 680 L1180 664 L1340 676 L1600 668 L1600 704 L0 704 Z" fill="#4a3f3c" opacity="0.85"/>
+  <rect y="700" width="1600" height="300" fill="url(#ground)"/>
+  <rect x="1080" y="700" width="100" height="170" fill="url(#reflection)"/>
+  <g fill="#f6f1e8">
+    <circle cx="200" cy="715" r="1.5" opacity="0.15"/><circle cx="245" cy="715" r="1.5" opacity="0.18"/>
+    <circle cx="290" cy="715" r="1.5" opacity="0.21"/><circle cx="335" cy="715" r="1.5" opacity="0.24"/>
+    <circle cx="380" cy="715" r="1.6" opacity="0.27"/><circle cx="425" cy="715" r="1.6" opacity="0.3"/>
+    <circle cx="470" cy="715" r="1.6" opacity="0.33"/><circle cx="515" cy="715" r="1.6" opacity="0.36"/>
+    <circle cx="560" cy="715" r="1.7" opacity="0.4"/><circle cx="605" cy="715" r="1.7" opacity="0.44"/>
+    <circle cx="650" cy="715" r="1.7" opacity="0.48"/><circle cx="695" cy="715" r="1.8" opacity="0.52"/>
+    <circle cx="740" cy="715" r="1.8" opacity="0.56"/><circle cx="785" cy="715" r="1.8" opacity="0.6"/>
+    <circle cx="830" cy="715" r="1.9" opacity="0.64"/><circle cx="875" cy="715" r="1.9" opacity="0.68"/>
+    <circle cx="920" cy="715" r="1.9" opacity="0.72"/><circle cx="965" cy="715" r="2" opacity="0.76"/>
+    <circle cx="1010" cy="715" r="2" opacity="0.8"/><circle cx="1055" cy="715" r="2" opacity="0.84"/>
+    <circle cx="1100" cy="715" r="2.1" opacity="0.88"/><circle cx="1145" cy="715" r="2.1" opacity="0.9"/>
+    <circle cx="1190" cy="715" r="2.1" opacity="0.92"/><circle cx="1235" cy="715" r="2.2" opacity="0.94"/>
+    <circle cx="1280" cy="715" r="2.2" opacity="0.96"/><circle cx="1325" cy="715" r="2.2" opacity="0.98"/>
+    <circle cx="1370" cy="715" r="2.3" opacity="1"/><circle cx="1415" cy="715" r="2.3" opacity="1"/>
+    <circle cx="1460" cy="715" r="2.3" opacity="1"/><circle cx="1505" cy="715" r="2.4" opacity="1"/>
+  </g>
+  <g fill="#0f1620">
+    <rect x="0" y="0" width="1600" height="118" opacity="0.55"/>
+    <rect x="0" y="112" width="1600" height="10"/>
+    <rect x="356" y="0" width="12" height="860"/>
+    <rect x="664" y="0" width="12" height="860"/>
+    <rect x="970" y="0" width="14" height="860"/>
+    <rect x="1278" y="0" width="14" height="860"/>
+    <rect x="0" y="852" width="1600" height="148" opacity="0.9"/>
+  </g>
+</svg>

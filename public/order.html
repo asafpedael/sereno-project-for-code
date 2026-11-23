@@ -9,18 +9,37 @@
   <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/theme.css">
   <script type="module" src="/js/order-form.js"></script>
 </head>
-<body>
+<body class="dark-body">
   <header class="site-header">
-    <div class="site-header__inner">
-      <span class="brand">Sereno</span>
+    <div class="site-header__inner site-header__inner--full">
+      <a class="brand-link" href="/">
+        <span class="brand">Sereno</span>
+        <span class="brand-link__tagline">quality. speed. comfort.</span>
+      </a>
       <span class="site-header__meta" id="step-counter">Step 1 of 4</span>
     </div>
   </header>
 
-  <main class="page">
-    <div class="container-narrow form-page">
+  <main class="page split">
+    <!-- Desktop only: the Sereno scene beside the form (Asaf, 22.11.2026). -->
+    <aside class="split__aside" aria-label="About your booking">
+      <div class="split__aside-inner">
+        <p class="label-caps split__eyebrow">VIP departure escort</p>
+        <h2 class="split__heading">Book your escort in <em>four short steps.</em></h2>
+        <ul class="split__points">
+          <li>Departures only.</li>
+          <li>Every booking is subject to manager approval.</li>
+          <li>Suggestions shown are recommendations only.</li>
+          <li>We email you the decision.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <div class="split__main theme-dark">
+    <div class="container-narrow form-page card-page">
 
       <form id="order-form" class="form-shell" novalidate>
         <ol class="progress" aria-label="Booking progress">
@@ -153,6 +172,29 @@
             <p class="field__error" id="notes-error" hidden></p>
           </div>
 
+          <!-- Review (M6): rebuilt by order-form.js each time step 4 opens -->
+          <section class="review stack" aria-labelledby="review-heading">
+            <h2 class="review__heading" id="review-heading">Review</h2>
+            <div class="panel review__panel">
+              <div class="data-row">
+                <div><p class="data-row__label">Flight</p><p class="data-row__value" id="review-flight"></p></div>
+                <button class="link-button" type="button" data-edit-step="1" aria-label="Edit flight">Edit</button>
+              </div>
+              <div class="data-row">
+                <div><p class="data-row__label">Travellers and bags</p><p class="data-row__value" id="review-travellers"></p></div>
+                <button class="link-button" type="button" data-edit-step="2" aria-label="Edit travellers and bags">Edit</button>
+              </div>
+              <div class="data-row">
+                <div><p class="data-row__label">Services</p><p class="data-row__value" id="review-services"></p></div>
+                <button class="link-button" type="button" data-edit-step="2" aria-label="Edit services">Edit</button>
+              </div>
+              <div class="data-row">
+                <div><p class="data-row__label">Escort</p><p class="data-row__value" id="review-escort"></p></div>
+                <button class="link-button" type="button" data-edit-step="3" aria-label="Edit escort scope">Edit</button>
+              </div>
+            </div>
+          </section>
+
           <!-- Anti-bot field: hidden from people, left empty by real browsers -->
           <div class="visually-hidden" aria-hidden="true">
             <label for="website">Website</label>
@@ -207,6 +249,7 @@
         </div>
       </section>
 
+    </div>
     </div>
   </main>
 </body>

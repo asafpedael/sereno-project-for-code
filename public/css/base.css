@@ -101,7 +101,7 @@ a:hover { color: var(--color-deep-navy); }
   min-height: var(--control-height);
   padding: 0 var(--space-3);
   border: var(--rule-width) solid transparent;
-  border-radius: var(--radius);
+  border-radius: var(--radius-button);
   font-family: var(--font-body);
   font-size: var(--fs-button);
   font-weight: 700;
@@ -144,7 +144,7 @@ a:hover { color: var(--color-deep-navy); }
   padding: 0 var(--space-2);
   background: var(--color-paper);
   border: var(--rule-width) solid var(--color-ink-soft);
-  border-radius: var(--radius);
+  border-radius: var(--radius-field);
   color: var(--color-navy);
   font-size: var(--fs-body);
 }
@@ -188,6 +188,9 @@ a:hover { color: var(--color-deep-navy); }
   cursor: pointer;
 }
 .stepper__btn:disabled { color: var(--color-ink-soft); opacity: 0.55; cursor: not-allowed; }
+/* Rounded outer corners only: the three parts read as one control. */
+.stepper__btn:first-child { border-radius: var(--radius-field) 0 0 var(--radius-field); }
+.stepper__btn:last-child { border-radius: 0 var(--radius-field) var(--radius-field) 0; }
 .stepper__input {
   min-height: var(--control-height);
   width: 100%;
@@ -213,7 +216,7 @@ a:hover { color: var(--color-deep-navy); }
   padding: 0 var(--space-2);
   background: var(--color-paper);
   border: var(--rule-width) solid var(--color-ink-soft);
-  border-radius: var(--radius);
+  border-radius: var(--radius-field);
   font-weight: 700;
   font-size: var(--fs-small);
   cursor: pointer;
@@ -227,7 +230,7 @@ a:hover { color: var(--color-deep-navy); }
   height: 20px;
   margin: 0;
   border: 1.6px solid var(--color-navy);
-  border-radius: var(--radius);
+  border-radius: 4px;
   background: var(--color-paper) center / 14px 14px no-repeat;
   cursor: pointer;
 }
@@ -245,7 +248,7 @@ a:hover { color: var(--color-deep-navy); }
   padding: var(--space-2);
   background: var(--color-paper);
   border: var(--rule-width) solid var(--color-ink-soft);
-  border-radius: var(--radius);
+  border-radius: var(--radius-field);
   cursor: pointer;
 }
 .radio-card + .radio-card { margin-top: var(--space-2); }
@@ -306,8 +309,13 @@ a:hover { color: var(--color-deep-navy); }
 .data-row__label { font-size: var(--fs-tag); color: var(--color-ink-soft); }
 .data-row__value { font-weight: 700; font-size: var(--fs-small); }
 
+/* Review in step 4 (M6): heading in the heading font, rows with an "Edit" link */
+.review__heading { font-family: var(--font-heading); font-weight: 500; font-size: 24px; color: var(--color-navy); }
+.review__panel { padding-top: 4px; padding-bottom: 4px; }
+.review .link-button { flex: none; min-height: 46px; padding: 0 4px; }
+
 /* Selectable list (e.g. flight results) */
-.option-list { border: var(--rule-width) solid var(--color-rule-light); border-radius: var(--radius); background: var(--color-paper); }
+.option-list { border: var(--rule-width) solid var(--color-rule-light); border-radius: var(--radius-field); background: var(--color-paper); overflow: hidden; }
 .option {
   display: flex;
   width: 100%;
@@ -397,3 +405,15 @@ a:hover { color: var(--color-deep-navy); }
 
 /* Thin line icons (1.6px, no fill) */
 .icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; }
+
+/* ---------- Motion (M6 "website" polish, 22.11.2026) ----------
+   Short colour transitions on everything you can press, and the button arrow moves a little
+   on hover. Turned off for people who ask their system for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .link-button, .option, .check, .radio-card, .input, .textarea, .tab, a {
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .btn__arrow { transition: transform 160ms ease; }
+  .btn:hover:not(:disabled) .btn__arrow { transform: translateX(3px); }
+}
+.check:hover, .radio-card:hover { border-color: var(--color-navy); }

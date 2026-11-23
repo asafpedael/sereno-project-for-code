@@ -9,7 +9,7 @@ import { meetingTime } from '../public/js/meeting-time.js';
 import { notify } from '../lib/notify.js';
 import { formatLocalIL, formatDateOnly, israelDayRange } from '../lib/time.js';
 import { generateOrderDraft } from '../lib/ai.js';
-import { buildOrderDraftInput } from '../lib/prompts.js';
+import { buildOrderDraftInput, NEW_CUSTOMER_HISTORY } from '../lib/prompts.js';
 import lists from '../data/lists.json' with { type: 'json' };
 
 const SERVICE_LABELS = Object.fromEntries(lists.services.map((s) => [s.code, s.label]));
@@ -38,6 +38,32 @@ async function countOrdersSince(since, customerId) {
   const { count, error } = await query;
   if (error) throw error;
   return count ?? 0;
+}
+
+// Returning-customer context for the AI (decision 11, M6 plan D9): history notes and the 3
+// newest "completed" orders. Only for a customer who existed before this order.
+async function readCustomerHistory(customerId) {
+  const [customer, completed] = await Promise.all([
+    getSupabase().from('customers').select('history_notes').eq('id', customerId).maybeSingle(),
+    getSupabase()
+      .from('orders')
+      .select('services, manager_notes, created_at, flight:flights(destination)')
+      .eq('customer_id', customerId)
+      .eq('status', 'completed')
+      .order('created_at', { ascending: false })
+      .limit(3),
+  ]);
+  if (customer.error) throw customer.error;
+  if (completed.error) throw completed.error;
+  return {
+    is_returning_customer: completed.data.length > 0,
+    history_notes: customer.data ? customer.data.history_notes : null,
+    previous_orders: completed.data.map((o) => ({
+      destination: o.flight ? o.flight.destination : null,
+      services: o.services,
+      manager_notes: o.manager_notes,
+    })),
+  };
 }
 
 async function findCustomerId(email) {
@@ -169,7 +195,8 @@ export default withHandler(['POST'], async (req, res) => {
   //    The order is already saved: an AI failure only stores { status: 'failed' }.
   //    No draft for a flight that was not found (ai_output stays empty).
   if (flight) {
-    const aiOutput = await generateOrderDraft(buildOrderDraftInput(order, flight));
+    const history = knownCustomerId ? await readCustomerHistory(knownCustomerId) : NEW_CUSTOMER_HISTORY;
+    const aiOutput = await generateOrderDraft(buildOrderDraftInput(order, flight, history));
     const { error: aiSaveError } = await getSupabase()
       .from('orders').update({ ai_output: aiOutput }).eq('id', saved.id);
     if (aiSaveError) console.error(`submit-order: ai_output not saved (${aiSaveError.code || 'no code'})`);

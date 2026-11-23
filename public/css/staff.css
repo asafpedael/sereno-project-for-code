@@ -109,6 +109,16 @@
 .decision__done { display: flex; align-items: center; font-weight: 700; font-size: var(--fs-small); color: var(--color-ink-soft); }
 @media (max-width: 480px) { .decision__buttons .btn { flex: 1; min-width: 0; } }
 
+/* M6: "Meeting time" and "Manager notes" side by side on desktop (mockup), stacked on phones */
+.decision__fields { display: grid; gap: var(--space-3); align-items: start; }
+@media (min-width: 900px) { .decision__fields { grid-template-columns: minmax(0, 360px) 1fr; } }
+.decision__fields .meeting-field { max-width: none; }
+.notes-field .textarea { min-height: 72px; }
+.notes-field__actions { display: flex; justify-content: flex-end; }
+
+/* M6: "Customer history" lines under "Customer notes" */
+.history__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+
 /* ---------- Simple staff page body ---------- */
 .staff-main {
   width: 100%;

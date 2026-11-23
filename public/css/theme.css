@@ -1,0 +1,174 @@
+/* Shared "website" look (Asaf, 22.11.2026) for the order form, staff sign in and staff screens,
+   in the style of the home page. Phone: one column. Desktop: the Sereno scene on the left
+   (sticky), the form in a framed card on the right. Softly rounded buttons and fields, no shadows. */
+
+.dark-body { background: var(--color-deep-navy); }
+
+/* ---------- Dark form (Asaf, 22.11.2026: navy like the home page) ----------
+   Inside .theme-dark the colour tokens are re-mapped, so every shared form style (fields,
+   options, progress, review, panels) turns dark without being written twice:
+   "navy" (text, strong lines) becomes cream, "cream" and "paper" (backgrounds) become navy. */
+.theme-dark {
+  --color-navy: #F6F1E8;
+  --color-cream: #131C28;
+  --color-paper: #1A2636;
+  --color-ink-soft: #B9C2CD;
+  --color-rule-light: rgba(246, 241, 232, 0.2);
+  --color-error: #F0A898;   /* light error red: 4.5:1 or more on the dark fields */
+  --color-success: #8FD1AE; /* light success green for status lines on dark */
+  color-scheme: dark;       /* native date / time pickers in dark too */
+  background: var(--color-cream);
+  color: var(--color-navy);
+}
+/* Places where the real colours must stay */
+.theme-dark .panel-dark { background: #22344A; border: var(--rule-width) solid rgba(246, 241, 232, 0.2); color: #F6F1E8; }
+.theme-dark .panel-dark__manual, .theme-dark .panel-dark__date { color: #F6F1E8; }
+.theme-dark .alert-error { color: #9C3B2A; }
+.theme-dark .tag-approved, .theme-dark .alert-success { color: #2E6B4D; }
+.theme-dark .check__input:checked {
+  background-color: var(--color-gold);
+  border-color: var(--color-gold);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3 8.5l3 3 7-7' fill='none' stroke='%230F1620' stroke-width='2'/%3E%3C/svg%3E");
+}
+.theme-dark .radio-card__input:checked { background: radial-gradient(circle, var(--color-gold) 0 4.5px, var(--color-paper) 5px); border-color: var(--color-gold); }
+.theme-dark .radio-card:has(.radio-card__input:checked) { border-color: var(--color-gold); }
+.theme-dark .input:focus, .theme-dark .textarea:focus { border-color: var(--color-gold); }
+.theme-dark .received__icon path { stroke: var(--color-gold); }
+/* Soft outlines on the dark fields instead of bright white lines (Asaf, 22.11.2026);
+   they light up on hover and turn gold when the field is in use. */
+.theme-dark .input, .theme-dark .textarea, .theme-dark .check, .theme-dark .radio-card,
+.theme-dark .stepper__btn, .theme-dark .stepper__input, .theme-dark .option-list {
+  border-color: rgba(246, 241, 232, 0.16);
+}
+.theme-dark .input[readonly] { border-color: rgba(246, 241, 232, 0.1); }
+.theme-dark .check:hover, .theme-dark .radio-card:hover, .theme-dark .input:hover:not([readonly]),
+.theme-dark .textarea:hover, .theme-dark .stepper__btn:hover:not(:disabled) { border-color: rgba(246, 241, 232, 0.42); }
+.theme-dark .check:has(.check__input:checked) { border-color: var(--color-gold); }
+.theme-dark .check__input { border-color: rgba(246, 241, 232, 0.55); }
+.theme-dark .option + .option { border-top-color: rgba(246, 241, 232, 0.1); }
+
+/* Header: brand with the tagline under it, as on the home page */
+.site-header__inner--full { max-width: none; }
+.brand-link { display: flex; flex-direction: column; gap: 3px; text-decoration: none; color: var(--color-cream); }
+.brand-link:hover { color: var(--color-cream); }
+.brand-link__tagline { font-size: 11px; line-height: 1.3; letter-spacing: 0.16em; color: var(--color-on-dark-soft); }
+
+/* ---------- Split layout ---------- */
+.split__aside { display: none; }
+.split__main { flex: 1; display: flex; flex-direction: column; }
+
+@media (min-width: 900px) {
+  .split { display: grid; grid-template-columns: minmax(340px, 5fr) 7fr; align-items: start; }
+  .split__aside {
+    display: flex;
+    position: sticky;
+    top: 0;
+    height: calc(100vh - 64px);
+    min-height: 520px;
+    overflow: hidden;
+    background: var(--color-deep-navy) url("/assets/scene.svg") 82% center / cover no-repeat;
+    color: var(--color-cream);
+  }
+  .split__aside::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(15, 22, 32, 0.92) 0%, rgba(15, 22, 32, 0.7) 45%, rgba(15, 22, 32, 0.12) 78%, rgba(15, 22, 32, 0.4) 100%);
+  }
+  .split__aside-inner {
+    position: relative;
+    padding: var(--space-5) var(--space-5) var(--space-6);
+    max-width: 520px;
+  }
+  .split__eyebrow { color: var(--color-gold); letter-spacing: 0.18em; }
+  .split__heading {
+    margin-top: var(--space-2);
+    font-family: var(--font-heading);
+    font-weight: 500;
+    font-size: clamp(36px, 3.4vw, 52px);
+    line-height: 1.1;
+  }
+  .split__heading em { font-style: italic; color: var(--color-gold); }
+  .split__points { list-style: none; margin: var(--space-3) 0 0; padding: 0; display: grid; gap: 10px; }
+  .split__points li { display: flex; gap: 12px; align-items: baseline; color: var(--color-on-dark-soft); font-size: var(--fs-small); }
+  .split__points li::before { content: ''; flex: none; width: 18px; height: 1px; background: var(--color-gold); transform: translateY(-4px); }
+
+  .split__main { min-height: calc(100vh - 64px); padding: var(--space-5) var(--space-4); }
+
+  /* The form sits in a framed card (Paper, hairline), like a page of a booking site. */
+  .card-page {
+    flex: none;
+    padding: var(--space-4) var(--space-5);
+    background: var(--color-paper);
+    border: var(--rule-width) solid var(--color-rule-light);
+    border-radius: var(--radius);
+    border-top: 2px solid var(--color-gold);
+  }
+  .card-page .option-list,
+  .card-page .check,
+  .card-page .radio-card,
+  .card-page .input,
+  .card-page .textarea,
+  .card-page .panel { background: var(--color-cream); }
+  .card-page .option:hover,
+  .card-page .option[aria-pressed="true"] { background: var(--color-paper); }
+}
+
+/* Error outlines keep priority over the soft dark outlines */
+.theme-dark .radio-group.is-invalid .radio-card,
+.theme-dark .input[aria-invalid="true"] { border-color: var(--color-error); }
+
+/* Staff sign in: the card is narrower and sits in the middle of the dark side */
+.card-page--small { max-width: calc(440px + 2 * var(--gutter)); }
+@media (min-width: 900px) {
+  .split__main--center { justify-content: center; align-items: center; }
+  .card-page--small { width: 100%; max-width: 440px; }
+}
+
+/* Phone: the sign-in page shows the scene as a short banner above the form (field agents
+   sign in on the phone); the points are left for the desktop. */
+@media (max-width: 899px) {
+  .split__aside--banner {
+    display: flex;
+    position: relative;
+    min-height: 168px;
+    background: var(--color-deep-navy) url("/assets/scene.svg") 80% 62% / cover no-repeat;
+    color: var(--color-cream);
+  }
+  .split__aside--banner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(15, 22, 32, 0.9) 0%, rgba(15, 22, 32, 0.55) 60%, rgba(15, 22, 32, 0.25) 100%);
+  }
+  .split__aside--banner .split__aside-inner { position: relative; align-self: flex-end; padding: var(--space-3) var(--gutter); }
+  .split__aside--banner .split__eyebrow { color: var(--color-gold); letter-spacing: 0.18em; }
+  .split__aside--banner .split__heading { margin-top: 6px; font-family: var(--font-heading); font-weight: 500; font-size: 30px; line-height: 1.1; }
+  .split__aside--banner .split__heading em { font-style: italic; color: var(--color-gold); }
+  .split__aside--banner .split__points { display: none; }
+}
+
+/* ---------- Staff screens (manager) in the same dark look ---------- */
+.staff-header__left .brand-link { align-self: center; }
+.theme-dark .approvals__list { background: rgba(0, 0, 0, 0.14); }
+.theme-dark .details-panels .panel { background: var(--color-cream); }
+@media (min-width: 900px) {
+  /* The selected order sits in a framed card, like the order form. */
+  .theme-dark .approvals__details {
+    margin: var(--space-3) var(--space-4) var(--space-4);
+    padding: var(--space-4);
+    background: var(--color-paper);
+    border: var(--rule-width) solid var(--color-rule-light);
+    border-top: 2px solid var(--color-gold);
+    border-radius: var(--radius);
+    align-self: start;
+  }
+}
+/* Narrow screens: the staff header keeps only the name, so the tabs and buttons fit. */
+@media (max-width: 599px) { .staff-header .brand-link__tagline { display: none; } }
+
+/* ---------- Field agent (phone) in the same dark look ---------- */
+.theme-dark.agent { min-height: calc(100vh - 64px); }
+.theme-dark .agent-card { border-radius: var(--radius-field); }
+.theme-dark .agent-card__time { color: var(--color-gold); }
+.theme-dark .agent-card__notes { border-radius: var(--radius-field); border-left: 3px solid var(--color-gold); }

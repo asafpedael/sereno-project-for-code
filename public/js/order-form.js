@@ -412,6 +412,41 @@ function validateStep(step) {
   return true;
 }
 
+// ---------- Step 4: review (M6, plan D3, D4) ----------
+
+// Same text as data/lists.json (the escort labels are also written in the page).
+const ESCORT_LABELS = { full: 'Full (to the gate)', partial: 'Partial (to security)' };
+
+function plural(n, word) {
+  return `${n} ${word}${n === 1 ? '' : 's'}`;
+}
+
+function flightSummary() {
+  if (state.manual) {
+    const date = isRealDate(manualDateInput.value) ? ` · ${formatDateOnly(manualDateInput.value)}` : '';
+    return `${normalizeFlightNo(manualNoInput.value)}${date}`;
+  }
+  return state.flight ? `${flightLabel(state.flight)} · ${formatDateTimeIL(state.flight.departure_at)}` : '';
+}
+
+// The review shows the page's own state, the same values the submit sends.
+function renderReview() {
+  $('review-flight').textContent = flightSummary();
+  $('review-travellers').textContent =
+    `${plural(readCount('travelers'), 'traveller')} · ${plural(readCount('bags'), 'bag')}`;
+  const services = [...form.querySelectorAll('input[name="services"]:checked')]
+    .map((input) => input.closest('label').textContent.trim());
+  $('review-services').textContent = services.length ? services.join(', ') : 'None';
+  $('review-escort').textContent = ESCORT_LABELS[selectedEscort()] || '';
+}
+
+// "Edit" opens that step with every value kept; Next walks forward again to step 4.
+for (const button of form.querySelectorAll('[data-edit-step]')) {
+  button.addEventListener('click', () => {
+    if (!state.submitting) showStep(Number(button.dataset.editStep));
+  });
+}
+
 // ---------- Navigation ----------
 
 function showStep(step, { moveFocus = true } = {}) {
@@ -431,6 +466,7 @@ function showStep(step, { moveFocus = true } = {}) {
   btnNextLabel.textContent = step === STEPS ? 'Submit request' : 'Next';
   clearFormError();
   if (step === 2) updateMeetingTime();
+  if (step === 4) renderReview();
   if (moveFocus) {
     window.scrollTo(0, 0);
     $(`heading-${step}`).focus();

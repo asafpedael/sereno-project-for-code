@@ -10,13 +10,17 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/staff.css">
+  <link rel="stylesheet" href="/css/theme.css">
   <script type="module" src="/js/manager.js"></script>
 </head>
-<body>
+<body class="dark-body">
   <header class="site-header staff-header">
     <div class="site-header__inner site-header__inner--wide">
       <div class="staff-header__left">
-        <span class="brand">Sereno</span>
+        <a class="brand-link" href="/staff/manager.html">
+          <span class="brand">Sereno</span>
+          <span class="brand-link__tagline">quality. speed. comfort.</span>
+        </a>
         <nav class="tabs" aria-label="Staff sections">
           <a class="tab" href="/staff/manager.html" aria-current="page">Approvals</a>
         </nav>
@@ -28,7 +32,7 @@
     </div>
   </header>
 
-  <main class="approvals">
+  <main class="approvals theme-dark">
     <div class="approvals__head">
       <div>
         <h1 class="h3">Orders awaiting decision</h1>

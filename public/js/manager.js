@@ -41,6 +41,9 @@ let heldOrder = null;
 let heldMessage = '';
 // Id of the missing-flight order whose clarification email just failed (shown until the next action).
 let clarificationWarning = null;
+// Customer history per order id (M6, plan D7): an array of previous orders, 'loading' or 'error'.
+// Loaded from GET /api/orders?id= when an order is selected; cleared on Refresh.
+const historyById = new Map();
 
 function labelMap(list) {
   return Object.fromEntries((list || []).map((item) => [item.code, item.label]));
@@ -97,7 +100,8 @@ function renderList() {
     },
     el('span', { className: 'order-item__title' }, `${order.customer.full_name} · ${order.flight.flight_no}`),
     el('span', { className: 'order-item__sub' }, sub),
-    el('span', { className: 'order-item__tags' }, orderTag(order)));
+    el('span', { className: 'order-item__tags' }, orderTag(order),
+      order.is_returning_customer ? el('span', { className: 'tag tag-returning' }, 'Returning') : null));
     button.addEventListener('click', () => {
       selectOrder(order.id);
       // One-column layout (phone): bring the details into view below the list.
@@ -130,13 +134,17 @@ function panel(title, text) {
     el('p', { className: 'panel__text' }, text));
 }
 
-// AI panel (M4): the personal email draft when the AI output passed every check.
-// The service recommendation is shown from M6.
+// AI panel: the recommended services (M6, plan D5; the server keeps only porter / wheelchair)
+// and the personal email draft (M4), when the AI output passed every check.
 function aiPanel(order) {
   const ai = order.ai_output;
   if (!ai || ai.status !== 'ok' || !ai.customer_paragraph) return panel('AI recommendations', 'AI suggestions unavailable');
+  const recommended = ai.recommended_services.length
+    ? ai.recommended_services.map((code) => labels.services[code] || code).join(', ')
+    : 'None';
   return el('div', { className: 'panel stack' },
     el('h3', { className: 'panel__title' }, 'AI recommendations'),
+    el('p', { className: 'panel__text' }, `Recommended services: ${recommended}`),
     el('p', { className: 'panel__text' }, 'Email draft:'),
     el('p', { className: 'panel__text ai-draft' }, `“${ai.customer_paragraph}”`));
 }
@@ -168,7 +176,7 @@ function renderDetails() {
       dataItem('Travellers · Bags', `${order.travelers} · ${order.bags}`),
       dataItem('Services · Escort', `${servicesText(order)} · ${escortText}`)),
     el('div', { className: 'details-panels' },
-      panel('Customer notes', order.customer_notes || 'No notes'),
+      customerPanel(order),
       // No AI box for a missing flight (DESIGN): the flight panel takes its place.
       missing ? missingFlightPanel(order) : order.flight_change_pending ? flightChangePanel(order) : aiPanel(order)),
   );
@@ -182,6 +190,110 @@ function renderDetails() {
   } else if (order.flight_change_pending) {
     detailsNode.append(flightChangeArea(order));
   }
+}
+
+// ---------- Customer notes and history (M6, plan D7) ----------
+
+// "Customer notes" and "Customer history" in one panel, as the mockup. The history is
+// filled in place when GET /api/orders?id= answers, so typed inputs are not redrawn.
+function customerPanel(order) {
+  const historyBody = el('div', { className: 'stack history', attrs: { id: 'history-body' } });
+  fillHistory(historyBody, order);
+  if (!historyById.has(order.id)) loadHistory(order);
+  return el('div', { className: 'panel stack' },
+    el('h3', { className: 'panel__title' }, 'Customer notes'),
+    el('p', { className: 'panel__text' }, order.customer_notes || 'No notes'),
+    el('h3', { className: 'panel__title' }, 'Customer history'),
+    historyBody);
+}
+
+const STATUS_WORDS = {
+  pending: 'Pending', approved: 'Approved', rejected: 'Rejected',
+  needs_clarification: 'Needs clarification', completed: 'Completed',
+};
+
+function historyLine(item) {
+  const parts = [item.flight_no];
+  if (item.destination) parts.push(item.destination);
+  if (item.departure_at) parts.push(formatDateIL(item.departure_at));
+  else if (item.flight_date_submitted) parts.push(formatDateOnly(item.flight_date_submitted));
+  parts.push(STATUS_WORDS[item.status] || item.status);
+  return parts.join(' · ');
+}
+
+function fillHistory(node, order) {
+  clear(node);
+  const history = historyById.get(order.id);
+  if (history === undefined || history === 'loading') {
+    node.append(el('p', { className: 'panel__text text-soft' }, 'Loading history…'));
+    return;
+  }
+  if (history === 'error') {
+    node.append(el('p', { className: 'panel__text' }, 'History could not be loaded.'));
+    return;
+  }
+  const count = history.length;
+  let summary;
+  if (count === 0) summary = order.is_returning_customer ? 'Returning customer' : 'No previous orders';
+  else summary = `${order.is_returning_customer ? 'Returning customer · ' : ''}${plural(count, 'previous order')}`;
+  node.append(el('p', { className: 'panel__text' }, summary));
+  if (count) {
+    node.append(el('ul', { className: 'history__list' },
+      ...history.map((item) => el('li', { className: 'panel__text text-soft' }, historyLine(item)))));
+  }
+}
+
+async function loadHistory(order) {
+  historyById.set(order.id, 'loading');
+  try {
+    const data = await staffGet(`/api/orders?id=${encodeURIComponent(order.id)}`);
+    historyById.set(order.id, Array.isArray(data.order.previous_orders) ? data.order.previous_orders : []);
+  } catch (err) {
+    if (err.status === 401) return; // going to the login page
+    historyById.set(order.id, 'error');
+  }
+  const node = document.getElementById('history-body');
+  if (node && selectedId === order.id) fillHistory(node, order);
+}
+
+// ---------- Manager notes (M6, plan D11) ----------
+
+// "Manager notes" box with "Save note" (add_note, any status). value() is what Approve and
+// Reject send with the decision; an empty box there keeps any earlier note.
+function notesField(order) {
+  const textarea = el('textarea', {
+    className: 'textarea',
+    attrs: { id: 'manager-notes', maxlength: '500', placeholder: 'Add a note for the field agent', 'aria-describedby': 'notes-error' },
+  });
+  textarea.value = order.manager_notes || '';
+  const error = el('p', { className: 'field__error', attrs: { id: 'notes-error', hidden: '' } });
+  const saveButton = el('button', { className: 'btn btn-small btn-secondary', attrs: { type: 'button' } }, 'Save note');
+
+  saveButton.addEventListener('click', async () => {
+    error.hidden = true;
+    saveButton.disabled = true;
+    try {
+      const data = await staffPost('/api/order-decision', { order_id: order.id, action: 'add_note', manager_notes: textarea.value });
+      // Update the order in place, so the other inputs keep what the manager typed.
+      orders = orders.map((o) => (o.id === data.order.id ? { ...o, manager_notes: data.order.manager_notes } : o));
+      order.manager_notes = data.order.manager_notes;
+      textarea.value = data.order.manager_notes || '';
+      setStatus(data.order.manager_notes ? `Note saved for order ${order.reference}.` : `Note cleared for order ${order.reference}.`);
+    } catch (err) {
+      if (err.status === 401) return;
+      error.textContent = err.message || GENERIC_MESSAGE;
+      error.hidden = false;
+    } finally {
+      saveButton.disabled = false;
+    }
+  });
+
+  const node = el('div', { className: 'field notes-field' },
+    el('label', { className: 'field__label', attrs: { for: 'manager-notes' } }, 'Manager notes'),
+    textarea,
+    el('div', { className: 'notes-field__actions' }, saveButton),
+    error);
+  return { node, value: () => textarea.value };
 }
 
 // ---------- Exceptions (M5): missing flight and flight time changed ----------
@@ -228,13 +340,16 @@ function clarificationArea(order) {
     : el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Confirm flight missing');
   const buttons = [rejectButton, confirmButton].filter(Boolean);
   const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
+  const notes = notesField(order);
 
   async function send(action) {
     formError.hidden = true;
     clarificationWarning = null;
     for (const b of buttons) b.disabled = true;
     try {
-      const data = await staffPost('/api/order-decision', { order_id: order.id, action });
+      const body = { order_id: order.id, action };
+      if (action === 'reject') body.manager_notes = notes.value();
+      const data = await staffPost('/api/order-decision', body);
       if (action === 'reject') {
         if (data.email_sent) {
           setStatus(`Order ${order.reference} rejected. Email sent to the customer.`);
@@ -263,6 +378,7 @@ function clarificationArea(order) {
   if (confirmButton) confirmButton.addEventListener('click', () => send('confirm_flight_missing'));
 
   return el('div', { className: 'decision' },
+    el('div', { className: 'decision__fields' }, notes.node),
     el('div', { className: 'decision__actions' }, formError,
       el('div', { className: 'decision__buttons' },
         rejectButton,
@@ -277,6 +393,7 @@ function flightChangeArea(order) {
   const ignoreButton = el('button', { className: 'btn btn-secondary', attrs: { type: 'button' } }, 'Ignore');
   const approveButton = el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Approve change');
   const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
+  const notes = notesField(order);
 
   async function send(body) {
     meeting.clearErrors();
@@ -313,7 +430,7 @@ function flightChangeArea(order) {
   ignoreButton.addEventListener('click', () => send({ order_id: order.id, action: 'ignore_flight_change' }));
 
   return el('div', { className: 'decision' },
-    meeting.node,
+    el('div', { className: 'decision__fields' }, meeting.node, notes.node),
     el('div', { className: 'decision__actions' }, formError,
       el('div', { className: 'decision__buttons' }, ignoreButton, approveButton)));
 }
@@ -417,12 +534,15 @@ function decisionArea(order) {
     formError.hidden = false;
   }
 
+  const notes = notesField(order);
+
   async function send(body) {
     clearErrors();
     rejectButton.disabled = true;
     approveButton.disabled = true;
     try {
-      const data = await staffPost('/api/order-decision', body);
+      // The note goes with the decision (an empty box keeps any earlier note).
+      const data = await staffPost('/api/order-decision', { ...body, manager_notes: notes.value() });
       const verb = body.action === 'approve' ? 'approved' : 'rejected';
       if (data.email_sent) {
         setStatus(`Order ${order.reference} ${verb}. Email sent to the customer.`);
@@ -456,7 +576,7 @@ function decisionArea(order) {
   rejectButton.addEventListener('click', () => send({ order_id: order.id, action: 'reject' }));
 
   return el('div', { className: 'decision' },
-    field,
+    el('div', { className: 'decision__fields' }, field, notes.node),
     el('div', { className: 'decision__actions' }, formError,
       el('div', { className: 'decision__buttons' }, rejectButton, approveButton)));
 }
@@ -498,6 +618,7 @@ async function loadOrders() {
     const data = await staffGet('/api/orders?view=inbox');
     orders = data.orders;
     heldOrder = null;
+    historyById.clear(); // Refresh also reloads the customer history
     if (!orders.some((o) => o.id === selectedId)) selectedId = orders.length ? orders[0].id : null;
     renderList();
     renderDetails();

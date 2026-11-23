@@ -10,12 +10,16 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/staff.css">
+  <link rel="stylesheet" href="/css/theme.css">
   <script type="module" src="/js/agent.js"></script>
 </head>
-<body>
+<body class="dark-body">
   <header class="site-header staff-header">
     <div class="site-header__inner agent-header">
-      <span class="brand">Sereno</span>
+      <a class="brand-link" href="/staff/agent.html">
+        <span class="brand">Sereno</span>
+        <span class="brand-link__tagline">quality. speed. comfort.</span>
+      </a>
       <div class="staff-header__right">
         <span class="staff-role">Field agent</span>
         <button class="btn btn-small btn-on-dark" id="logout" type="button">Log out</button>
@@ -23,7 +27,7 @@
     </div>
   </header>
 
-  <main class="agent">
+  <main class="agent theme-dark">
     <div class="agent__head">
       <h1 class="h3">Approved orders</h1>
       <button class="btn btn-small btn-secondary" id="refresh" type="button">Refresh</button>

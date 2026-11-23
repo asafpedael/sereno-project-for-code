@@ -5,12 +5,14 @@
 // A failed email never undoes the decision: the reply says email_sent: false (decision 10).
 // M5: reject from "needs_clarification", confirm_flight_missing (clarification email) and
 // approve/ignore of a flight time change.
+// M6: add_note (manager, any status, no email), and manager_notes saved with approve/reject.
 import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { requireStaff, roleMayDecide } from '../lib/auth.js';
 import { validateDecisionBody } from '../lib/validate.js';
 import {
   ORDER_SELECT, toManagerView, toAgentView, flightChangePending, clarificationSent,
+  completedByCustomer, isReturningCustomer,
 } from '../lib/orders-view.js';
 import { meetingTime } from '../public/js/meeting-time.js';
 import {
@@ -76,7 +78,7 @@ async function confirmFlightMissing(res, order) {
   }
 
   const updated = await readOrder(order.id);
-  return sendOk(res, { order: toManagerView(updated), email_sent: emailSent });
+  return sendOk(res, { order: await managerView(updated), email_sent: emailSent });
 }
 
 // Flight time changed after approval (plan D13, D8). Approve: new meeting time from the
@@ -106,9 +108,9 @@ async function resolveFlightChange(res, order, ignore, requestedFinal) {
   });
   if (!updated) return sendError(res, 409, 'conflict', CHANGE_DONE);
 
-  if (ignore) return sendOk(res, { order: toManagerView(updated) });
+  if (ignore) return sendOk(res, { order: await managerView(updated) });
   const emailSent = await notify(flightChangeEmailPayload(updated, order.final_time));
-  return sendOk(res, { order: toManagerView(updated), email_sent: emailSent });
+  return sendOk(res, { order: await managerView(updated), email_sent: emailSent });
 }
 
 // Reads one order with the customer's email and the flight.
@@ -117,6 +119,15 @@ async function readOrder(orderId) {
     .from('orders').select(ORDER_SELECT).eq('id', orderId).maybeSingle();
   if (error) throw error;
   return data;
+}
+
+// The manager view of a decided order, with is_returning_customer (decision 11, plan D6),
+// so the screen keeps the "Returning" tag on an order that stays open.
+async function managerView(row) {
+  const { data, error } = await getSupabase()
+    .from('orders').select('id, customer_id').eq('status', 'completed').eq('customer_id', row.customer_id);
+  if (error) throw error;
+  return toManagerView(row, { returning: isReturningCustomer(row, completedByCustomer(data)) });
 }
 
 // Runs a conditional-update function and returns the updated row with the customer and
@@ -140,10 +151,19 @@ export default withHandler(['POST'], async (req, res) => {
 
   const checked = validateDecisionBody(body);
   if (checked.error) return sendError(res, 400, 'bad_request', checked.error);
-  const { order_id: orderId, final_time: requestedFinal } = checked.value;
+  const { order_id: orderId, final_time: requestedFinal, manager_notes: notes } = checked.value;
 
   const order = await readOrder(orderId);
   if (!order) return sendError(res, 404, 'not_found', 'Order not found.');
+
+  // Manager notes (FR-29, plan D12): one plain update in any status, no email.
+  // The note is shown to the field agent and never sent to the customer.
+  if (action === 'add_note') {
+    const { error: noteError } = await getSupabase()
+      .from('orders').update({ manager_notes: notes }).eq('id', orderId);
+    if (noteError) throw noteError;
+    return sendOk(res, { order: await managerView(await readOrder(orderId)) });
+  }
 
   // Field agent: approved -> completed (FR-41, decision 8). No email.
   if (action === 'complete') {
@@ -164,7 +184,7 @@ export default withHandler(['POST'], async (req, res) => {
     if (!REJECTABLE.includes(order.status)) return sendError(res, 409, 'conflict', ALREADY_DECIDED);
     updated = await runUpdate('decide_order', {
       p_order_id: orderId, p_from: REJECTABLE, p_to: 'rejected',
-      p_final_time: null, p_notes: null, p_departure: null, p_recommended: null,
+      p_final_time: null, p_notes: notes, p_departure: null, p_recommended: null,
     });
   } else {
     if (order.status !== 'pending') return sendError(res, 409, 'conflict', ALREADY_DECIDED);
@@ -180,7 +200,8 @@ export default withHandler(['POST'], async (req, res) => {
     }
     updated = await runUpdate('decide_order', {
       p_order_id: orderId, p_from: ['pending'], p_to: 'approved',
-      p_final_time: finalTime.toISOString(), p_notes: null,
+      // An empty box sends null, and decide_order keeps any earlier note.
+      p_final_time: finalTime.toISOString(), p_notes: notes,
       p_departure: departure.toISOString(), p_recommended: recommended.toISOString(),
     });
   }
@@ -189,5 +210,5 @@ export default withHandler(['POST'], async (req, res) => {
 
   const payload = action === 'approve' ? approvedEmailPayload(updated) : rejectedEmailPayload(updated);
   const emailSent = await notify(payload);
-  sendOk(res, { order: toManagerView(updated), email_sent: emailSent });
+  sendOk(res, { order: await managerView(updated), email_sent: emailSent });
 });

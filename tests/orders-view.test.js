@@ -52,11 +52,17 @@ test('manager view: contact details come from the order, email from the customer
   assert.equal(view.escort_scope, 'full');
 });
 
-test('manager view does not include fields of later milestones', () => {
+test('manager view does not include internal ids', () => {
   const view = toManagerView(row());
-  for (const key of ['manager_notes', 'customer_id', 'flight_id']) {
+  for (const key of ['customer_id', 'flight_id']) {
     assert.ok(!(key in view), `${key} must not be returned`);
   }
+});
+
+test('manager view includes the manager notes (M6); empty becomes null', () => {
+  assert.equal(toManagerView(row()).manager_notes, 'secret note');
+  assert.equal(toManagerView(row({ manager_notes: '' })).manager_notes, null);
+  assert.equal(toManagerView(row({ manager_notes: null })).manager_notes, null);
 });
 
 test('order without a flight shows the submitted flight number and no recommended time', () => {

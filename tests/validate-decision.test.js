@@ -7,7 +7,7 @@ const ID = 'A1B2C3D4-0000-4000-8000-000000000001';
 
 test('valid approve without a meeting time (server uses the recomputed one)', () => {
   assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'approve' }).value,
-    { order_id: ID.toLowerCase(), action: 'approve', final_time: null });
+    { order_id: ID.toLowerCase(), action: 'approve', final_time: null, manager_notes: null });
 });
 
 test('valid approve with a meeting time, Z or offset', () => {
@@ -29,15 +29,15 @@ test('bad body or order id', () => {
 
 test('complete is accepted (M4)', () => {
   assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'complete' }).value,
-    { order_id: ID.toLowerCase(), action: 'complete', final_time: null });
+    { order_id: ID.toLowerCase(), action: 'complete', final_time: null, manager_notes: null });
 });
 
 test('meeting time is refused with complete', () => {
   assert.ok(validateDecisionBody({ order_id: ID, action: 'complete', final_time: '2026-12-10T10:45:00Z' }).error);
 });
 
-test('actions of later milestones do not exist yet', () => {
-  for (const action of ['add_note', '', undefined, 1]) {
+test('unknown actions are refused', () => {
+  for (const action of ['archive', '', undefined, 1]) {
     assert.equal(validateDecisionBody({ order_id: ID, action }).error, 'Unknown action.');
   }
 });
@@ -45,7 +45,7 @@ test('actions of later milestones do not exist yet', () => {
 test('M5 actions are accepted', () => {
   for (const action of ['confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change']) {
     assert.deepEqual(validateDecisionBody({ order_id: ID, action }).value,
-      { order_id: ID.toLowerCase(), action, final_time: null }, action);
+      { order_id: ID.toLowerCase(), action, final_time: null, manager_notes: null }, action);
   }
 });
 
@@ -65,4 +65,42 @@ test('meeting time must have a zone and be a real date', () => {
 
 test('meeting time is refused with reject', () => {
   assert.ok(validateDecisionBody({ order_id: ID, action: 'reject', final_time: '2026-12-10T10:45:00Z' }).error);
+});
+
+// ---------- M6: manager notes (plan D12) ----------
+
+test('add_note is accepted with a note, trimmed', () => {
+  assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: '  Extra margin needed \n' }).value,
+    { order_id: ID.toLowerCase(), action: 'add_note', final_time: null, manager_notes: 'Extra margin needed' });
+});
+
+test('add_note with an empty note clears it; without the field it is refused', () => {
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: '   ' }).value.manager_notes, null);
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note' }).error, 'Manager notes are required.');
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: null }).error, 'Manager notes are required.');
+});
+
+test('manager notes are allowed with approve and reject', () => {
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'approve', manager_notes: 'Large family' }).value.manager_notes, 'Large family');
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'reject', manager_notes: 'Duplicate' }).value.manager_notes, 'Duplicate');
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'approve', manager_notes: '' }).value.manager_notes, null);
+});
+
+test('manager notes are refused with the other actions', () => {
+  for (const action of ['complete', 'confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change']) {
+    assert.equal(validateDecisionBody({ order_id: ID, action, manager_notes: 'x' }).error,
+      'Manager notes can only be saved with approve, reject or add_note.', action);
+  }
+});
+
+test('manager notes: new lines allowed, other control characters and non-strings refused', () => {
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: 'Line 1\nLine 2' }).value.manager_notes, 'Line 1\nLine 2');
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: 'bad\u0007bell' }).error, 'Manager notes are not valid.');
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: 42 }).error, 'Manager notes are not valid.');
+});
+
+test('manager notes: up to 500 characters', () => {
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: 'a'.repeat(500) }).value.manager_notes.length, 500);
+  assert.equal(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: 'a'.repeat(501) }).error,
+    'Manager notes must be 500 characters or fewer.');
 });

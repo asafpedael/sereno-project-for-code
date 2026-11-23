@@ -77,9 +77,55 @@ test('input: first name, flight in Israel time, no email, phone or meeting time'
     flight: { flight_no: 'DM101', destination: 'London', departure_local: '10 Dec 2026, 14:30' },
     travelers: 2, bags: 3, selected_services: ['porter'], escort_scope: 'full',
     customer_notes: 'One oversized bag.',
+    is_returning_customer: false, history_notes: null, previous_orders: [],
   });
   const text = JSON.stringify(input);
   for (const secret of ['daniel@example.com', '050-1110001', 'meeting']) assert.ok(!text.includes(secret), secret);
+});
+
+// ---------- M6: returning customer (plan D9, D10) ----------
+
+const HISTORY = {
+  is_returning_customer: true,
+  history_notes: 'Returning customer. 1 previous completed order (London).',
+  previous_orders: [
+    { destination: 'London', services: ['porter'], manager_notes: 'Needs extra margin.', id: 'x', email: 'a@b.c', reference: 'A1B2C3D4' },
+    { destination: 'Paris', services: [], manager_notes: '' },
+    { destination: 'Rome', services: ['wheelchair'], manager_notes: null },
+    { destination: 'Athens', services: [], manager_notes: null },
+  ],
+};
+
+test('input with history: exact keys, at most 3 previous orders, no ids, email or references', () => {
+  const input = buildOrderDraftInput(ORDER, FLIGHT, HISTORY);
+  assert.deepEqual(Object.keys(input).sort(), [
+    'bags', 'customer_first_name', 'customer_notes', 'escort_scope', 'flight', 'history_notes',
+    'is_returning_customer', 'previous_orders', 'selected_services', 'travelers',
+  ]);
+  assert.equal(input.is_returning_customer, true);
+  assert.deepEqual(input.previous_orders, [
+    { destination: 'London', services: ['porter'], manager_notes: 'Needs extra margin.' },
+    { destination: 'Paris', services: [], manager_notes: null },
+    { destination: 'Rome', services: ['wheelchair'], manager_notes: null },
+  ]);
+  const text = JSON.stringify(input);
+  for (const secret of ['daniel@example.com', '050-1110001', 'a@b.c', 'A1B2C3D4', '"id"']) assert.ok(!text.includes(secret), secret);
+});
+
+test('input with history: notes are cut (history 500, manager notes 300)', () => {
+  const input = buildOrderDraftInput(ORDER, FLIGHT, {
+    is_returning_customer: true,
+    history_notes: 'h'.repeat(600),
+    previous_orders: [{ destination: 'London', services: [], manager_notes: 'm'.repeat(400) }],
+  });
+  assert.equal(input.history_notes.length, 500);
+  assert.equal(input.previous_orders[0].manager_notes.length, 300);
+});
+
+test('system instruction keeps internal notes out of the paragraph', () => {
+  for (const phrase of ['internal staff information', 'Never mention, quote or summarize', 'welcome the customer back']) {
+    assert.ok(ORDER_DRAFT_SYSTEM.includes(phrase), phrase);
+  }
 });
 
 test('input: empty notes become null', () => {

@@ -10,39 +10,58 @@
   <link rel="stylesheet" href="/css/tokens.css">
   <link rel="stylesheet" href="/css/base.css">
   <link rel="stylesheet" href="/css/staff.css">
+  <link rel="stylesheet" href="/css/theme.css">
   <script type="module" src="/js/login.js"></script>
 </head>
-<body>
+<body class="dark-body">
   <header class="site-header">
-    <div class="site-header__inner">
-      <span class="brand">Sereno</span>
+    <div class="site-header__inner site-header__inner--full">
+      <a class="brand-link" href="/">
+        <span class="brand">Sereno</span>
+        <span class="brand-link__tagline">quality. speed. comfort.</span>
+      </a>
     </div>
   </header>
 
-  <main class="page">
-    <div class="container-narrow login">
-      <form id="login-form" class="stack-lg" novalidate>
-        <h1 class="h3">Staff sign in</h1>
+  <!-- Same split layout and dark form as the order form (Asaf, 22.11.2026). -->
+  <main class="page split">
+    <aside class="split__aside split__aside--banner" aria-label="About the staff area">
+      <div class="split__aside-inner">
+        <p class="label-caps split__eyebrow">Staff area</p>
+        <h2 class="split__heading">Welcome back to <em>Sereno.</em></h2>
+        <ul class="split__points">
+          <li>Managers review and decide on new orders.</li>
+          <li>Field agents see the approved orders.</li>
+          <li>Staff accounts only.</li>
+        </ul>
+      </div>
+    </aside>
 
-        <div class="field" id="field-email">
-          <label class="field__label" for="login-email">Email</label>
-          <input class="input" id="login-email" type="email" autocomplete="username" maxlength="254"
-                 aria-describedby="email-error" required>
-          <p class="field__error" id="email-error" hidden></p>
-        </div>
+    <div class="split__main split__main--center theme-dark">
+      <div class="container-narrow login card-page card-page--small">
+        <form id="login-form" class="stack-lg" novalidate>
+          <h1 class="h3">Staff sign in</h1>
 
-        <div class="field" id="field-password">
-          <label class="field__label" for="login-password">Password</label>
-          <input class="input" id="login-password" type="password" autocomplete="current-password" maxlength="200"
-                 aria-describedby="password-error" required>
-          <p class="field__error" id="password-error" hidden></p>
-        </div>
+          <div class="field" id="field-email">
+            <label class="field__label" for="login-email">Email</label>
+            <input class="input" id="login-email" type="email" autocomplete="username" maxlength="254"
+                   aria-describedby="email-error" required>
+            <p class="field__error" id="email-error" hidden></p>
+          </div>
 
-        <div class="stack">
-          <p class="alert-error" id="login-error" role="alert" hidden></p>
-          <button class="btn btn-primary btn-block" id="login-submit" type="submit">Sign in</button>
-        </div>
-      </form>
+          <div class="field" id="field-password">
+            <label class="field__label" for="login-password">Password</label>
+            <input class="input" id="login-password" type="password" autocomplete="current-password" maxlength="200"
+                   aria-describedby="password-error" required>
+            <p class="field__error" id="password-error" hidden></p>
+          </div>
+
+          <div class="stack">
+            <p class="alert-error" id="login-error" role="alert" hidden></p>
+            <button class="btn btn-primary btn-block" id="login-submit" type="submit">Sign in</button>
+          </div>
+        </form>
+      </div>
     </div>
   </main>
 </body>
