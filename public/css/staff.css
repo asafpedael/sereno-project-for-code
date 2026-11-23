@@ -196,3 +196,105 @@
 .confirm-row__buttons .btn { flex: 1; }
 /* Manager: AI email draft (quoted, secondary text) */
 .ai-draft { color: var(--color-ink-soft); }
+
+/* ---------- Archive (M7, desktop screen; mockup 9 without the statistics) ---------- */
+.archive { flex: 1; }
+.archive__inner {
+  width: 100%;
+  max-width: calc(var(--content-wide) + 2 * var(--gutter));
+  margin: 0 auto;
+  padding: var(--space-4) var(--gutter) var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.archive__filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.archive__search { flex: 1 1 280px; max-width: 360px; }
+.archive__status { flex: 0 0 200px; }
+.archive__date { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-1); }
+.archive__date-label { font-size: var(--fs-small); font-weight: 600; }
+.archive__filters .input { min-height: var(--control-height-small); font-size: var(--fs-small); }
+.archive__date .input { width: 168px; }
+.archive__filter-error { margin-top: calc(-1 * var(--space-2)); }
+.archive__message { margin: 0; }
+
+/* Status menu: a field with a thin arrow (Style Guide "chevron down") */
+.select {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M4 6l4 4 4-4' fill='none' stroke='%234A5868' stroke-width='1.6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  cursor: pointer;
+}
+
+/* Table: header with a 2px line under it, thin rules between rows (Style Guide) */
+.archive__table-wrap { overflow-x: auto; }
+.archive-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: var(--fs-small); }
+.archive-table:focus { outline: none; }
+.archive-table th {
+  padding: 10px 12px;
+  text-align: left;
+  font-size: var(--fs-tag);
+  font-weight: 700;
+  color: var(--color-ink-soft);
+  border-bottom: 2px solid var(--color-navy);
+  white-space: nowrap;
+}
+.archive-table td {
+  padding: 12px;
+  border-bottom: var(--rule-width) solid var(--color-rule-light);
+  white-space: nowrap;
+}
+.archive-table__ref { font-weight: 700; letter-spacing: 0.04em; }
+.archive-table__time { font-weight: 700; }
+
+/* "Showing 1–50 of 75" on the left, page buttons on the right */
+.archive__footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.archive__showing { color: var(--color-ink-soft); min-height: 1.4em; }
+.pager { display: flex; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.pager__button {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  background: transparent;
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: var(--radius-button);
+  color: var(--color-navy);
+  font-weight: 700;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.pager__button:hover:not(:disabled) { border-color: var(--color-navy); }
+.pager__button[aria-current="page"] { background: var(--color-navy); border-color: var(--color-navy); color: var(--color-cream); }
+.pager__button:disabled { opacity: 0.45; cursor: not-allowed; }
+.pager__gap { display: flex; align-items: center; padding: 0 4px; color: var(--color-ink-soft); }
+/* Phone: the archive header has two tabs, so the role name is left out to make room. */
+@media (max-width: 599px) {
+  .archive-header .staff-role { display: none; }
+  .archive-header .tabs { gap: var(--space-2); }
+}
+
+/* ---------- Field agent: "Orders" / "Archive" tabs and the archive link (M7, mockup 8) ---------- */
+.agent-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: calc(var(--content-narrow) + 2 * var(--gutter));
+  margin: 0 auto;
+  border-top: var(--rule-width) solid var(--color-rule-dark);
+}
+.agent-tabs__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 46px;
+  border-bottom: 2px solid transparent;
+  color: var(--color-on-dark-soft);
+  font-size: var(--fs-small);
+  font-weight: 600;
+  text-decoration: none;
+}
+.agent-tabs__tab:hover { color: var(--color-cream); }
+.agent-tabs__tab[aria-current="page"] { color: var(--color-cream); border-bottom-color: var(--color-gold); }
+.agent__archive-link { margin-top: var(--space-4); text-align: center; font-size: var(--fs-small); font-weight: 700; }

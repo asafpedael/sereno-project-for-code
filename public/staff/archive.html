@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Order archive · Sereno</title>
+  <link rel="preload" href="/assets/fonts/assistant-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/frank-ruhl-libre-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/staff.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <script type="module" src="/js/archive.js"></script>
+</head>
+<body class="dark-body">
+  <header class="site-header staff-header">
+    <div class="site-header__inner site-header__inner--wide archive-header">
+      <div class="staff-header__left">
+        <a class="brand-link" id="brand-link" href="/staff/login.html">
+          <span class="brand">Sereno</span>
+          <span class="brand-link__tagline">quality. speed. comfort.</span>
+        </a>
+        <!-- Filled by archive.js from the signed-in role (Approvals or Orders, then Archive). -->
+        <nav class="tabs" id="tabs" aria-label="Staff sections"></nav>
+      </div>
+      <div class="staff-header__right">
+        <span class="staff-role" id="role-label"></span>
+        <button class="btn btn-small btn-on-dark" id="logout" type="button">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="archive theme-dark">
+    <div class="archive__inner">
+      <h1 class="h3">Order archive</h1>
+
+      <form class="archive__filters" id="filters" role="search" novalidate>
+        <div class="archive__search">
+          <label class="visually-hidden" for="q">Search customer or flight</label>
+          <input class="input" id="q" name="q" type="search" placeholder="Search customer or flight" maxlength="40" autocomplete="off">
+        </div>
+        <div class="archive__status">
+          <label class="visually-hidden" for="status">Status</label>
+          <select class="input select" id="status" name="status">
+            <option value="">Status: All</option>
+          </select>
+        </div>
+        <div class="archive__date">
+          <label class="archive__date-label" for="from">From</label>
+          <input class="input" id="from" name="from" type="date">
+        </div>
+        <div class="archive__date">
+          <label class="archive__date-label" for="to">To</label>
+          <input class="input" id="to" name="to" type="date">
+        </div>
+      </form>
+      <p class="field__error archive__filter-error" id="filter-error" role="alert" hidden></p>
+
+      <p class="alert-error archive__message" id="list-error" role="alert" hidden></p>
+
+      <div class="archive__table-wrap">
+        <table class="archive-table" id="table" tabindex="-1">
+          <caption class="visually-hidden">Orders</caption>
+          <thead>
+            <tr>
+              <th scope="col">Reference</th>
+              <th scope="col">Customer</th>
+              <th scope="col">Flight</th>
+              <th scope="col">Departure</th>
+              <th scope="col">Meeting time</th>
+              <th scope="col">Status</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <p class="text-soft archive__message" id="list-loading">Loading orders…</p>
+      <p class="text-soft archive__message" id="list-empty" hidden>No orders match your search.</p>
+
+      <div class="archive__footer">
+        <p class="text-small archive__showing" id="showing" role="status"></p>
+        <nav aria-label="Pages">
+          <ul class="pager" id="pager"></ul>
+        </nav>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

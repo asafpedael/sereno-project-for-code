@@ -32,6 +32,17 @@ export function formatDateTimeIL(value) {
   return `${formatDateIL(value)} · ${formatTimeIL(value)}`;
 }
 
+const dayMonthFormat = new Intl.DateTimeFormat('en-GB', {
+  timeZone: TZ, day: 'numeric', month: 'short', year: 'numeric',
+});
+
+// "25 Oct" (the year is added when it is not the current year: "25 Oct 2025"). Archive, M7.
+export function formatDayMonthIL(value, now = new Date()) {
+  const p = Object.fromEntries(dayMonthFormat.formatToParts(toDate(value)).map((x) => [x.type, x.value]));
+  const thisYear = Object.fromEntries(dayMonthFormat.formatToParts(toDate(now)).map((x) => [x.type, x.value])).year;
+  return p.year === thisYear ? `${p.day} ${p.month}` : `${p.day} ${p.month} ${p.year}`;
+}
+
 // True when both instants fall on the same calendar day in Israel.
 export function isSameDayIL(a, b) {
   return dayKeyFormat.format(toDate(a)) === dayKeyFormat.format(toDate(b));

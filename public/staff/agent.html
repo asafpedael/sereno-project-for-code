@@ -25,6 +25,11 @@
         <button class="btn btn-small btn-on-dark" id="logout" type="button">Log out</button>
       </div>
     </div>
+    <!-- Second row of the header (DESIGN screen 4, mockup 8): Orders and Archive -->
+    <nav class="agent-tabs" aria-label="Staff sections">
+      <a class="agent-tabs__tab" href="/staff/agent.html" aria-current="page">Orders</a>
+      <a class="agent-tabs__tab" href="/staff/archive.html">Archive</a>
+    </nav>
   </header>
 
   <main class="agent theme-dark">
@@ -37,6 +42,7 @@
     <p class="text-soft" id="list-loading">Loading orders…</p>
     <p class="text-soft" id="list-empty" hidden>No approved orders.</p>
     <ul class="agent-list" id="order-list" aria-label="Approved orders"></ul>
+    <p class="agent__archive-link"><a href="/staff/archive.html">Archive · opens on desktop</a></p>
   </main>
 </body>
 </html>

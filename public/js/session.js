@@ -48,13 +48,15 @@ export function goToLogin() {
 }
 
 // For staff pages: returns the session, or redirects (to login, or to the other role's page).
+// role: one role, or a list of roles (the archive is open to both, M7).
 export function requireRole(role) {
   const session = getSession();
   if (!session) {
     goToLogin();
     return null;
   }
-  if (session.role !== role) {
+  const allowed = Array.isArray(role) ? role : [role];
+  if (!allowed.includes(session.role)) {
     location.replace(pageForRole(session.role));
     return null;
   }
