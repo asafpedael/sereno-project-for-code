@@ -159,3 +159,29 @@ test('notify: refused, failed or unconfigured returns false', async () => {
   delete process.env.N8N_WEBHOOK_SECRET;
   assert.equal(await notify({ type: 'customer_approved' }), false);
 });
+
+// ---------- "Request received" (FR-43) ----------
+import { receivedEmailPayload } from '../lib/notify.js';
+
+test('received email: reference, flight and departure in Israel time, nothing else', () => {
+  const payload = receivedEmailPayload({
+    reference: 'A1B2C3D4', email: 'daniel@example.com', name: 'Daniel A.',
+    flight: { flight_no: 'DM101', destination: 'London', departure_at: '2026-12-10T12:30:00+00:00' },
+    typedFlightNo: 'DM101', typedDate: null,
+  });
+  assert.deepEqual(payload, {
+    type: 'customer_received', to: 'daniel@example.com', customer_name: 'Daniel A.', reference: 'A1B2C3D4',
+    flight_no: 'DM101', destination: 'London', departure_local: '10 Dec 2026, 14:30',
+  });
+});
+
+test('received email for a typed flight that was not found: typed number and date, no hint', () => {
+  const payload = receivedEmailPayload({
+    reference: 'B2C3D4E5', email: 'yossi@example.com', name: 'Yossi C.',
+    flight: null, typedFlightNo: 'DM999', typedDate: '2026-12-12',
+  });
+  assert.equal(payload.flight_no, 'DM999');
+  assert.equal(payload.destination, null);
+  assert.equal(payload.departure_local, '12 Dec 2026');
+  assert.ok(!JSON.stringify(payload).toLowerCase().includes('not found'));
+});

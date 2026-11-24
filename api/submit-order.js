@@ -6,7 +6,7 @@ import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
-import { notify } from '../lib/notify.js';
+import { notify, receivedEmailPayload } from '../lib/notify.js';
 import { formatLocalIL, formatDateOnly, israelDayRange } from '../lib/time.js';
 import { generateOrderDraft } from '../lib/ai.js';
 import { buildOrderDraftInput, NEW_CUSTOMER_HISTORY } from '../lib/prompts.js';
@@ -202,9 +202,18 @@ export default withHandler(['POST'], async (req, res) => {
     if (aiSaveError) console.error(`submit-order: ai_output not saved (${aiSaveError.code || 'no code'})`);
   }
 
-  // 9. Alert the manager through n8n (FR-14). The order is already saved, so a failed
-  //    alert is only logged and the customer still gets success.
-  await notify({
+  // 9. Alert the manager through n8n (FR-14), and tell the customer the request was received
+  //    (FR-43). The order is already saved, so a failed email is only logged and the customer
+  //    still gets success. Both events are sent at the same time.
+  const receivedEmail = notify(receivedEmailPayload({
+    reference,
+    email: order.email,
+    name: order.full_name,
+    flight,
+    typedFlightNo: order.flight_no,
+    typedDate: order.flight_date,
+  }));
+  const managerAlert = notify({
     type: 'manager_alert',
     reference,
     customer_name: order.full_name,
@@ -218,6 +227,7 @@ export default withHandler(['POST'], async (req, res) => {
     escort_scope: ESCORT_LABELS[order.escort_scope] || order.escort_scope,
     needs_clarification: !flight,
   });
+  await Promise.all([managerAlert, receivedEmail]);
 
   // 10. Reply: reference and status only. Always "pending" for the customer, also when
   //     the typed flight was not found (the customer is not told).
