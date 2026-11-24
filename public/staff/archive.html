@@ -35,6 +35,12 @@
     <div class="archive__inner">
       <h1 class="h3">Order archive</h1>
 
+      <!-- M8: summary cards, filled by archive.js per role from the reply's "stats". -->
+      <section class="archive-stats" aria-labelledby="stats-heading">
+        <h2 class="visually-hidden" id="stats-heading">Summary</h2>
+        <ul class="archive-stats__list" id="stats"></ul>
+      </section>
+
       <form class="archive__filters" id="filters" role="search" novalidate>
         <div class="archive__search">
           <label class="visually-hidden" for="q">Search customer or flight</label>
@@ -59,6 +65,9 @@
 
       <p class="alert-error archive__message" id="list-error" role="alert" hidden></p>
 
+      <!-- M8: the table and the order panel ("View") side by side on wide screens. -->
+      <div class="archive__body">
+      <div class="archive__main">
       <div class="archive__table-wrap">
         <table class="archive-table" id="table" tabindex="-1">
           <caption class="visually-hidden">Orders</caption>
@@ -70,6 +79,7 @@
               <th scope="col">Departure</th>
               <th scope="col">Meeting time</th>
               <th scope="col">Status</th>
+              <th scope="col"><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
           <tbody id="rows"></tbody>
@@ -83,6 +93,11 @@
         <nav aria-label="Pages">
           <ul class="pager" id="pager"></ul>
         </nav>
+      </div>
+      </div>
+
+      <!-- M8: the order opened with "View" (filled by archive.js). Not a modal: the table stays usable. -->
+      <section class="archive-panel" id="order-panel" aria-labelledby="panel-heading" hidden></section>
       </div>
     </div>
   </main>

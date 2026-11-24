@@ -6,6 +6,7 @@
 // order details add the customer's previous orders (up to 5).
 // M7: view=archive for both roles (manager: every status; agent: approved and completed,
 // limited view), with search, status and departure-date filters and 50 rows per page.
+// M8: the archive reply adds "stats" for the summary cards, counted over every matching order.
 import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { requireStaff } from '../lib/auth.js';
@@ -14,25 +15,32 @@ import { israelDayRange } from '../lib/time.js';
 import {
   ORDER_SELECT, HISTORY_SELECT, MAX_PREVIOUS_ORDERS, toManagerView, toAgentView, byDeparture, byMeetingTime,
   flightChangePending, completedByCustomer, isReturningCustomer,
-  archiveStatuses, archiveSearchConditions, archiveDateConditions, combineOrGroups,
+  archiveStatuses, archiveSearchConditions, archiveDateConditions, combineOrGroups, archiveStats,
 } from '../lib/orders-view.js';
 
 const PAGE_SIZE = 50;
 const MAX_APPROVED_CHECKED = 500; // demo volumes are small
 const MAX_FLIGHTS_IN_RANGE = 1000;
 const MANAGER_ONLY = 'You do not have permission for this action.';
+const STATS_CHUNK = 1000; // Supabase answers at most 1000 rows per request
+const MAX_STATS_CHUNKS = 20;
+const CUSTOMER_ID_CHUNK = 200; // keeps the request address short
 
 // One query for the whole list (plan D6): the "completed" orders of the customers in it.
+// M8: the customer ids are sent in groups, because the archive statistics may hold many.
 async function completedMapFor(rows) {
   const customerIds = [...new Set(rows.map((r) => r.customer_id).filter(Boolean))];
-  if (customerIds.length === 0) return new Map();
-  const { data, error } = await getSupabase()
-    .from('orders')
-    .select('id, customer_id')
-    .eq('status', 'completed')
-    .in('customer_id', customerIds);
-  if (error) throw error;
-  return completedByCustomer(data);
+  const found = [];
+  for (let i = 0; i < customerIds.length; i += CUSTOMER_ID_CHUNK) {
+    const { data, error } = await getSupabase()
+      .from('orders')
+      .select('id, customer_id')
+      .eq('status', 'completed')
+      .in('customer_id', customerIds.slice(i, i + CUSTOMER_ID_CHUNK));
+    if (error) throw error;
+    found.push(...data);
+  }
+  return completedByCustomer(found);
 }
 
 // Manager views of a list, each with is_returning_customer.
@@ -51,7 +59,26 @@ async function flightIdsBetween(from, to) {
   return data.map((f) => f.id);
 }
 
+// M8 (plan D2): id, status and customer of every order matching the archive filters,
+// read in chunks of 1000 rows.
+async function allMatching(build) {
+  const rows = [];
+  for (let chunk = 0; chunk < MAX_STATS_CHUNKS; chunk += 1) {
+    const start = chunk * STATS_CHUNK;
+    const { data, error } = await build('id, status, customer_id')
+      .order('id', { ascending: true })
+      .range(start, start + STATS_CHUNK - 1);
+    if (error && error.code === 'PGRST103') break; // past the end
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < STATS_CHUNK) return rows;
+  }
+  console.warn('Archive statistics: more matching orders than were read.');
+  return rows;
+}
+
 // Archive (plan D6, D8-D10): newest order first, 50 rows per page, exact total.
+// M8: plus the summary cards (stats) over all matching orders, not only the page.
 async function archive(staff, req, res) {
   const parsed = validateArchiveQuery(req.query);
   if (parsed.error) return sendError(res, 400, 'bad_request', parsed.error);
@@ -72,21 +99,28 @@ async function archive(staff, req, res) {
   };
 
   const start = (page - 1) * PAGE_SIZE;
-  const { data, error, count } = await build(ORDER_SELECT, { count: 'exact' })
-    .order('created_at', { ascending: false })
-    .order('id', { ascending: false })
-    .range(start, start + PAGE_SIZE - 1);
+  const [pageResult, matching] = await Promise.all([
+    build(ORDER_SELECT, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .range(start, start + PAGE_SIZE - 1),
+    allMatching(build),
+  ]);
+  const { data, error, count } = pageResult;
+  // The manager's returning flags: one map for the cards and the page rows, so they agree.
+  const completed = staff.role === 'manager' ? await completedMapFor(matching) : null;
+  const stats = archiveStats(matching, completed, staff.role);
 
   if (error && error.code === 'PGRST103') {
     // A page past the end: no rows, but still the real total.
-    const counted = await build('id', { count: 'exact', head: true });
-    if (counted.error) throw counted.error;
-    return sendOk(res, { orders: [], page, page_size: PAGE_SIZE, total: counted.count || 0 });
+    return sendOk(res, { orders: [], page, page_size: PAGE_SIZE, total: matching.length, stats });
   }
   if (error) throw error;
 
-  const orders = staff.role === 'agent' ? data.map(toAgentView) : await managerViews(data);
-  return sendOk(res, { orders, page, page_size: PAGE_SIZE, total: count || 0 });
+  const orders = staff.role === 'agent'
+    ? data.map(toAgentView)
+    : data.map((row) => toManagerView(row, { returning: isReturningCustomer(row, completed) }));
+  return sendOk(res, { orders, page, page_size: PAGE_SIZE, total: count || 0, stats });
 }
 
 export default withHandler(['GET'], async (req, res) => {

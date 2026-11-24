@@ -45,6 +45,14 @@
 }
 .approvals__status { color: var(--color-success); font-weight: 600; min-height: 1.4em; }
 .approvals__status.is-error { color: var(--color-error); }
+/* M8: the status menu next to Refresh (DESIGN screen 3) */
+.approvals__tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+.approvals__filter { width: 230px; min-height: var(--control-height-small); font-size: var(--fs-small); }
+@media (max-width: 480px) {
+  .approvals__head { flex-wrap: wrap; }
+  .approvals__tools { width: 100%; justify-content: flex-start; }
+  .approvals__filter { flex: 1; width: auto; }
+}
 .approvals__body { flex: 1; display: grid; grid-template-columns: 1fr; }
 .approvals__list { border-bottom: var(--rule-width) solid var(--color-rule-light); }
 .approvals__message { margin: var(--space-2) var(--gutter); }
@@ -217,6 +225,86 @@
 .archive__date .input { width: 168px; }
 .archive__filter-error { margin-top: calc(-1 * var(--space-2)); }
 .archive__message { margin: 0; }
+
+/* M8: summary cards (mockup 9, Style Guide "data panel": thin border, 2px corners, no shadow).
+   Inside .theme-dark the paper colour is the dark card colour. */
+.archive-stats__list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.archive-stats__list--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 699px) {
+  .archive-stats__list, .archive-stats__list--three { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.archive-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--space-2) 20px;
+  background: var(--color-paper);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: var(--radius);
+}
+.archive-stat__number { font-family: var(--font-heading); font-size: 34px; line-height: 1.1; color: var(--color-navy); }
+.archive-stat__label { font-size: var(--fs-small); color: var(--color-ink-soft); }
+
+/* M8: the "Returning" tag after the customer name (manager only) */
+.archive-table__customer .tag { margin-left: 8px; vertical-align: middle; }
+
+/* M8: "View" in the last column, and the open order's row with a gold bar (Style Guide) */
+.archive-table__action { text-align: right; }
+.archive-table__view { min-height: 44px; padding: 0 4px; font-size: var(--fs-small); }
+.archive-table tr.is-selected td:first-child { box-shadow: inset 3px 0 0 var(--color-gold); }
+
+/* M8: the order panel. Wide screens: next to the table. Narrower: above the table. */
+.archive__body { display: flex; flex-direction: column; gap: var(--space-3); }
+.archive__main { display: flex; flex-direction: column; gap: var(--space-3); min-width: 0; }
+.archive-panel { order: -1; }
+@media (min-width: 1200px) {
+  .archive__body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+  .archive__body:has(.archive-panel[hidden]) { grid-template-columns: minmax(0, 1fr); }
+  .archive-panel { order: 0; position: sticky; top: var(--space-2); max-height: calc(100vh - 2 * var(--space-2)); overflow-y: auto; }
+  /* With the panel open the table is narrower: slightly tighter cells keep all 7 columns in view. */
+  .archive__body:not(:has(.archive-panel[hidden])) .archive-table { min-width: 640px; }
+  .archive__body:not(:has(.archive-panel[hidden])) .archive-table :is(th, td) { padding-left: 8px; padding-right: 8px; }
+}
+.archive-panel__head .h3 { font-size: 22px; white-space: nowrap; }
+.archive-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--color-paper);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-top: 2px solid var(--color-gold);
+  border-radius: var(--radius);
+}
+.archive-panel[hidden] { display: none; }
+.archive-panel__head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-2); }
+.archive-panel__head h2:focus { outline: none; }
+.archive-panel__tags { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.archive-panel__close {
+  width: 40px;
+  height: 40px;
+  margin-left: 6px;
+  background: transparent;
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: var(--radius-button);
+  color: var(--color-navy);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.archive-panel__close:hover { border-color: var(--color-navy); }
+/* Inside the narrow panel the data items and the two boxes stay in one column. */
+.archive-panel .details-grid, .archive-panel .details-panels { grid-template-columns: 1fr; }
+.archive-panel .details-panels .panel { background: var(--color-cream); }
+.archive-panel__status { color: var(--color-success); font-weight: 600; min-height: 1.4em; margin: 0; }
+.archive-panel__card { border-left-color: var(--color-gold); }
 
 /* Status menu: a field with a thin arrow (Style Guide "chevron down") */
 .select {

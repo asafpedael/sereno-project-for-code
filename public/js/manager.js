@@ -3,9 +3,14 @@
 import { getJson } from './api.js';
 import { el, clear } from './dom.js';
 import {
-  formatDayTimeIL, formatTimeIL, formatDateIL, isSameDayIL, toIsraelInputs, israelInputToIso,
+  formatTimeIL, formatDateIL, isSameDayIL, toIsraelInputs, israelInputToIso,
 } from './time.js';
 import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
+import {
+  orderTag, returningTag, plural, departureText, detailsGrid, aiPanel, missingFlightPanel, flightChangePanel,
+  customerPanel, clearHistory, notesField, setLabels,
+} from './order-details.js';
+import { filterInbox } from './inbox-filter.js';
 
 const BEFORE_DEPARTURE = 'Meeting time must be before departure';
 const MISSING_TIME = 'Please enter a date and time.';
@@ -23,16 +28,11 @@ const listLoading = document.getElementById('list-loading');
 const detailsNode = document.getElementById('details');
 const refreshButton = document.getElementById('refresh');
 const statusLine = document.getElementById('status-line');
+const filterSelect = document.getElementById('status-filter');
 
-const STATUS_TAGS = {
-  pending: { label: 'Pending', className: 'tag tag-pending' },
-  approved: { label: 'Approved', className: 'tag tag-approved' },
-  rejected: { label: 'Rejected', className: 'tag tag-rejected' },
-  needs_clarification: { label: 'Needs clarification', className: 'tag tag-dark' },
-  completed: { label: 'Completed', className: 'tag tag-approved' },
-};
+const EMPTY_INBOX = 'No orders are waiting for a decision.';
+const EMPTY_FILTER = 'No orders match this filter.';
 
-let labels = { services: {}, escort_scopes: {} };
 let orders = [];
 let selectedId = null;
 // A just-decided order whose customer email was not sent: it left the list but stays open
@@ -41,44 +41,6 @@ let heldOrder = null;
 let heldMessage = '';
 // Id of the missing-flight order whose clarification email just failed (shown until the next action).
 let clarificationWarning = null;
-// Customer history per order id (M6, plan D7): an array of previous orders, 'loading' or 'error'.
-// Loaded from GET /api/orders?id= when an order is selected; cleared on Refresh.
-const historyById = new Map();
-
-function labelMap(list) {
-  return Object.fromEntries((list || []).map((item) => [item.code, item.label]));
-}
-
-function statusTag(status) {
-  const tag = STATUS_TAGS[status] || { label: status, className: 'tag tag-pending' };
-  return el('span', { className: tag.className }, tag.label);
-}
-
-// An approved order whose flight moved shows "Flight time changed" instead of "Approved".
-function orderTag(order) {
-  if (order.flight_change_pending) return el('span', { className: 'tag tag-dark' }, 'Flight time changed');
-  return statusTag(order.status);
-}
-
-// "12 Dec 2026" from "2026-12-12".
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-function formatDateOnly(dateStr) {
-  const [y, m, d] = String(dateStr).split('-').map(Number);
-  return `${d} ${MONTHS[m - 1]} ${y}`;
-}
-
-function plural(n, word) {
-  return `${n} ${word}${n === 1 ? '' : 's'}`;
-}
-
-function departureText(order) {
-  return order.flight.departure_at ? formatDayTimeIL(order.flight.departure_at) : 'Not found';
-}
-
-function servicesText(order) {
-  if (!order.services.length) return 'No extra services';
-  return order.services.map((code) => labels.services[code] || code).join(', ');
-}
 
 function setStatus(message, { error = false } = {}) {
   statusLine.textContent = message;
@@ -87,10 +49,25 @@ function setStatus(message, { error = false } = {}) {
 
 // ---------- List ----------
 
+// The orders the status menu keeps (M8, plan D14). `orders` always holds the whole inbox.
+function shownOrders() {
+  return filterInbox(orders, filterSelect.value);
+}
+
+// When the open order is not in the filtered list, the first one there opens (or none).
+// A held order (decided, email not sent) stays open.
+function keepSelectionShown() {
+  const shown = shownOrders();
+  if (heldOrder && heldOrder.id === selectedId) return;
+  if (!shown.some((o) => o.id === selectedId)) selectedId = shown.length ? shown[0].id : null;
+}
+
 function renderList() {
   clear(listNode);
-  listEmpty.hidden = orders.length > 0;
-  for (const order of orders) {
+  const shown = shownOrders();
+  listEmpty.textContent = orders.length ? EMPTY_FILTER : EMPTY_INBOX;
+  listEmpty.hidden = shown.length > 0;
+  for (const order of shown) {
     const sub = order.status === 'needs_clarification'
       ? `Flight not found · ${plural(order.travelers, 'traveller')}`
       : `${order.flight.destination || 'Flight not found'} · ${departureText(order)} · ${plural(order.travelers, 'traveller')}`;
@@ -101,7 +78,7 @@ function renderList() {
     el('span', { className: 'order-item__title' }, `${order.customer.full_name} · ${order.flight.flight_no}`),
     el('span', { className: 'order-item__sub' }, sub),
     el('span', { className: 'order-item__tags' }, orderTag(order),
-      order.is_returning_customer ? el('span', { className: 'tag tag-returning' }, 'Returning') : null));
+      order.is_returning_customer ? returningTag() : null));
     button.addEventListener('click', () => {
       selectOrder(order.id);
       // One-column layout (phone): bring the details into view below the list.
@@ -122,33 +99,6 @@ function selectOrder(id) {
 
 // ---------- Details ----------
 
-function dataItem(label, value) {
-  return el('div', {},
-    el('span', { className: 'details-grid__label' }, label),
-    el('span', { className: 'details-grid__value' }, value));
-}
-
-function panel(title, text) {
-  return el('div', { className: 'panel stack' },
-    el('h3', { className: 'panel__title' }, title),
-    el('p', { className: 'panel__text' }, text));
-}
-
-// AI panel: the recommended services (M6, plan D5; the server keeps only porter / wheelchair)
-// and the personal email draft (M4), when the AI output passed every check.
-function aiPanel(order) {
-  const ai = order.ai_output;
-  if (!ai || ai.status !== 'ok' || !ai.customer_paragraph) return panel('AI recommendations', 'AI suggestions unavailable');
-  const recommended = ai.recommended_services.length
-    ? ai.recommended_services.map((code) => labels.services[code] || code).join(', ')
-    : 'None';
-  return el('div', { className: 'panel stack' },
-    el('h3', { className: 'panel__title' }, 'AI recommendations'),
-    el('p', { className: 'panel__text' }, `Recommended services: ${recommended}`),
-    el('p', { className: 'panel__text' }, 'Email draft:'),
-    el('p', { className: 'panel__text ai-draft' }, `“${ai.customer_paragraph}”`));
-}
-
 function renderDetails() {
   clear(detailsNode);
   const order = orders.find((o) => o.id === selectedId) || (heldOrder && heldOrder.id === selectedId ? heldOrder : null);
@@ -158,25 +108,14 @@ function renderDetails() {
   }
   detailsNode.hidden = false;
 
-  const flightText = order.flight.destination
-    ? `${order.flight.flight_no} · ${order.flight.destination}`
-    : order.flight.flight_no;
-  const escortText = labels.escort_scopes[order.escort_scope] || order.escort_scope;
-
   const missing = order.status === 'needs_clarification';
   detailsNode.append(
     el('div', { className: 'details__head' },
       el('h2', { className: 'h3' }, `Order ${order.reference}`),
       orderTag(order)),
-    el('div', { className: 'details-grid' },
-      dataItem('Customer', order.customer.full_name),
-      dataItem('Phone / Email', `${order.customer.phone} · ${order.customer.email}`),
-      dataItem('Flight', flightText),
-      dataItem('Departure', departureText(order)),
-      dataItem('Travellers · Bags', `${order.travelers} · ${order.bags}`),
-      dataItem('Services · Escort', `${servicesText(order)} · ${escortText}`)),
+    detailsGrid(order),
     el('div', { className: 'details-panels' },
-      customerPanel(order),
+      customerPanel(order, (id) => selectedId === id),
       // No AI box for a missing flight (DESIGN): the flight panel takes its place.
       missing ? missingFlightPanel(order) : order.flight_change_pending ? flightChangePanel(order) : aiPanel(order)),
   );
@@ -192,127 +131,13 @@ function renderDetails() {
   }
 }
 
-// ---------- Customer notes and history (M6, plan D7) ----------
-
-// "Customer notes" and "Customer history" in one panel, as the mockup. The history is
-// filled in place when GET /api/orders?id= answers, so typed inputs are not redrawn.
-function customerPanel(order) {
-  const historyBody = el('div', { className: 'stack history', attrs: { id: 'history-body' } });
-  fillHistory(historyBody, order);
-  if (!historyById.has(order.id)) loadHistory(order);
-  return el('div', { className: 'panel stack' },
-    el('h3', { className: 'panel__title' }, 'Customer notes'),
-    el('p', { className: 'panel__text' }, order.customer_notes || 'No notes'),
-    el('h3', { className: 'panel__title' }, 'Customer history'),
-    historyBody);
-}
-
-const STATUS_WORDS = {
-  pending: 'Pending', approved: 'Approved', rejected: 'Rejected',
-  needs_clarification: 'Needs clarification', completed: 'Completed',
-};
-
-function historyLine(item) {
-  const parts = [item.flight_no];
-  if (item.destination) parts.push(item.destination);
-  if (item.departure_at) parts.push(formatDateIL(item.departure_at));
-  else if (item.flight_date_submitted) parts.push(formatDateOnly(item.flight_date_submitted));
-  parts.push(STATUS_WORDS[item.status] || item.status);
-  return parts.join(' · ');
-}
-
-function fillHistory(node, order) {
-  clear(node);
-  const history = historyById.get(order.id);
-  if (history === undefined || history === 'loading') {
-    node.append(el('p', { className: 'panel__text text-soft' }, 'Loading history…'));
-    return;
-  }
-  if (history === 'error') {
-    node.append(el('p', { className: 'panel__text' }, 'History could not be loaded.'));
-    return;
-  }
-  const count = history.length;
-  let summary;
-  if (count === 0) summary = order.is_returning_customer ? 'Returning customer' : 'No previous orders';
-  else summary = `${order.is_returning_customer ? 'Returning customer · ' : ''}${plural(count, 'previous order')}`;
-  node.append(el('p', { className: 'panel__text' }, summary));
-  if (count) {
-    node.append(el('ul', { className: 'history__list' },
-      ...history.map((item) => el('li', { className: 'panel__text text-soft' }, historyLine(item)))));
-  }
-}
-
-async function loadHistory(order) {
-  historyById.set(order.id, 'loading');
-  try {
-    const data = await staffGet(`/api/orders?id=${encodeURIComponent(order.id)}`);
-    historyById.set(order.id, Array.isArray(data.order.previous_orders) ? data.order.previous_orders : []);
-  } catch (err) {
-    if (err.status === 401) return; // going to the login page
-    historyById.set(order.id, 'error');
-  }
-  const node = document.getElementById('history-body');
-  if (node && selectedId === order.id) fillHistory(node, order);
-}
-
-// ---------- Manager notes (M6, plan D11) ----------
-
-// "Manager notes" box with "Save note" (add_note, any status). value() is what Approve and
-// Reject send with the decision; an empty box there keeps any earlier note.
-function notesField(order) {
-  const textarea = el('textarea', {
-    className: 'textarea',
-    attrs: { id: 'manager-notes', maxlength: '500', placeholder: 'Add a note for the field agent', 'aria-describedby': 'notes-error' },
-  });
-  textarea.value = order.manager_notes || '';
-  const error = el('p', { className: 'field__error', attrs: { id: 'notes-error', hidden: '' } });
-  const saveButton = el('button', { className: 'btn btn-small btn-secondary', attrs: { type: 'button' } }, 'Save note');
-
-  saveButton.addEventListener('click', async () => {
-    error.hidden = true;
-    saveButton.disabled = true;
-    try {
-      const data = await staffPost('/api/order-decision', { order_id: order.id, action: 'add_note', manager_notes: textarea.value });
-      // Update the order in place, so the other inputs keep what the manager typed.
-      orders = orders.map((o) => (o.id === data.order.id ? { ...o, manager_notes: data.order.manager_notes } : o));
-      order.manager_notes = data.order.manager_notes;
-      textarea.value = data.order.manager_notes || '';
-      setStatus(data.order.manager_notes ? `Note saved for order ${order.reference}.` : `Note cleared for order ${order.reference}.`);
-    } catch (err) {
-      if (err.status === 401) return;
-      error.textContent = err.message || GENERIC_MESSAGE;
-      error.hidden = false;
-    } finally {
-      saveButton.disabled = false;
-    }
-  });
-
-  const node = el('div', { className: 'field notes-field' },
-    el('label', { className: 'field__label', attrs: { for: 'manager-notes' } }, 'Manager notes'),
-    textarea,
-    el('div', { className: 'notes-field__actions' }, saveButton),
-    error);
-  return { node, value: () => textarea.value };
-}
-
-// ---------- Exceptions (M5): missing flight and flight time changed ----------
-
-function missingFlightPanel(order) {
-  const typed = order.submitted_flight || { flight_no: order.flight.flight_no, date: null };
-  return el('div', { className: 'panel stack' },
-    el('h3', { className: 'panel__title' }, 'Flight not found in our schedule'),
-    el('div', { className: 'details-grid' },
-      dataItem('Flight number entered', typed.flight_no),
-      dataItem('Departure date entered', typed.date ? formatDateOnly(typed.date) : 'Not given')));
-}
-
-function flightChangePanel(order) {
-  return el('div', { className: 'panel stack' },
-    el('h3', { className: 'panel__title' }, 'Flight time changed'),
-    el('div', { className: 'details-grid' },
-      dataItem('Previous departure', formatDayTimeIL(order.previous_departure_at)),
-      dataItem('New departure', formatDayTimeIL(order.flight.departure_at))));
+// After "Save note": the order in the list keeps the new note, so the other inputs keep what
+// the manager typed (no redraw).
+function noteSaved(order) {
+  return (notes, message) => {
+    orders = orders.map((o) => (o.id === order.id ? { ...o, manager_notes: notes } : o));
+    setStatus(message);
+  };
 }
 
 // The shared error handling of every decision request.
@@ -340,7 +165,7 @@ function clarificationArea(order) {
     : el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Confirm flight missing');
   const buttons = [rejectButton, confirmButton].filter(Boolean);
   const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
-  const notes = notesField(order);
+  const notes = notesField(order, noteSaved(order));
 
   async function send(action) {
     formError.hidden = true;
@@ -393,7 +218,7 @@ function flightChangeArea(order) {
   const ignoreButton = el('button', { className: 'btn btn-secondary', attrs: { type: 'button' } }, 'Ignore');
   const approveButton = el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Approve change');
   const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
-  const notes = notesField(order);
+  const notes = notesField(order, noteSaved(order));
 
   async function send(body) {
     meeting.clearErrors();
@@ -534,7 +359,7 @@ function decisionArea(order) {
     formError.hidden = false;
   }
 
-  const notes = notesField(order);
+  const notes = notesField(order, noteSaved(order));
 
   async function send(body) {
     clearErrors();
@@ -583,9 +408,10 @@ function decisionArea(order) {
 
 // After a decision: drop the order and select the one that took its place.
 function removeOrder(id) {
-  const index = orders.findIndex((o) => o.id === id);
+  const index = shownOrders().findIndex((o) => o.id === id);
   orders = orders.filter((o) => o.id !== id);
-  const next = orders[Math.min(index, orders.length - 1)];
+  const shown = shownOrders();
+  const next = shown[Math.min(Math.max(index, 0), shown.length - 1)];
   selectedId = next ? next.id : null;
   renderList();
   renderDetails();
@@ -618,8 +444,8 @@ async function loadOrders() {
     const data = await staffGet('/api/orders?view=inbox');
     orders = data.orders;
     heldOrder = null;
-    historyById.clear(); // Refresh also reloads the customer history
-    if (!orders.some((o) => o.id === selectedId)) selectedId = orders.length ? orders[0].id : null;
+    clearHistory(); // Refresh also reloads the customer history
+    keepSelectionShown();
     renderList();
     renderDetails();
   } catch (err) {
@@ -634,13 +460,18 @@ async function loadOrders() {
 
 async function start() {
   bindLogout(document.getElementById('logout'));
+  filterSelect.addEventListener('change', () => {
+    keepSelectionShown();
+    renderList();
+    renderDetails();
+  });
   refreshButton.addEventListener('click', () => {
     setStatus('');
     loadOrders();
   });
   try {
     const config = await getJson('/api/config');
-    labels = { services: labelMap(config.lists.services), escort_scopes: labelMap(config.lists.escort_scopes) };
+    setLabels(config.lists);
   } catch {
     // Labels are optional: codes are shown instead.
   }

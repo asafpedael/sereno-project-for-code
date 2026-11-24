@@ -960,3 +960,23 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** ADR-24 expected that notes on approved orders no longer in the manager's list would be added through the archive in M7, but MILESTONES M7 leaves out full order details ("View", feature 35, Could).
 **Decision:** M7 builds no "View" and no note editing in the archive (plan O2, Asaf 23.11.2026). The archive is read-only.
 **Consequences:** A note on an approved order can still be written only at approval time or while the order is in the manager's list. Opening an order from the archive is a later decision (feature 35).
+
+### ADR-29: Archive statistics are counted on the server with the archive filters
+**Context:** Feature 33 (M8): four summary cards above the archive that follow the search and filters (Asaf, 23.11.2026). The page query returns only 50 rows, and the agent may not see returning information (§3).
+**Decision:** `view=archive` adds `stats` to its reply. After the page query, the same filter (role statuses, `q`, `status`, `from`, `to`) is read again as `id, status, customer_id` for every matching order, in chunks of 1000 rows (at most 20). `archiveStats` in `lib/orders-view.js` counts them. Manager: `{ total, approved, returning_customers, rejected }`, where `approved` is `approved` + `completed` (every order the manager approved, Asaf 24.11.2026) and `returning_customers` counts different customers with a returning order. Agent: `{ total, approved, completed }`. The completed-orders map of ADR-22 is read once for all matching customers (ids in groups of 200) and gives both the card and the page rows' "Returning" tags. No migration.
+**Consequences:** One more read per archive request, a few more when there are many matching customers; the cards never disagree with the table. Asaf wants the agent's cards to count only the orders he completed himself; that needs agent assignment and is left for M9.
+
+### ADR-30: Opening an order from the archive, and notes from there
+**Context:** Feature 35 (M8) and ADR-28: the archive was read-only, so a note on an approved order that left the manager's list could not be added.
+**Decision:** Each archive row has "View", which opens a side panel next to the table (360px at 1200px and wider, above the table on narrower screens; Escape or × closes it and returns focus to the row). Manager: the Approvals details read-only plus the meeting time, customer history (`?id=`) and "Manager notes" with "Save note" (`add_note`, any status, no email). No decision buttons: decisions stay on the Approvals screen. Agent: only the agent card's fields, taken from the `toAgentView` row (no request, nothing editable). The details drawing moved from `manager.js` to the shared `public/js/order-details.js`, used by both screens. No server change for the panel.
+**Consequences:** ADR-28's limit ends. A change to the order details is made once, for both screens.
+
+### ADR-31: The Approvals status menu filters in the browser
+**Context:** DESIGN screen 3 shows "Status: All" next to "Orders awaiting decision" (M8).
+**Decision:** A menu next to "Refresh" with All, Pending, Needs clarification and Flight time changed (an approved order with `flight_change_pending`). `public/js/inbox-filter.js` filters the inbox already loaded, with no server change. The open order stays open if it matches, otherwise the first match opens. The choice is kept on Refresh and after a decision, and resets on page reload.
+**Consequences:** The filter costs no request. "Returning" is not an option, because it marks a customer, not a status.
+
+### ADR-32: Gemini keys removed
+**Context:** ADR-14 moved the AI layer to OpenAI and noted that `GEMINI_API_KEY` and `GEMINI_MODEL` could be removed.
+**Decision:** M8 (24.11.2026): the code has no Gemini reference. `.env.example` has no `GEMINI_` line, and Asaf removed both keys from `.env.local` and Vercel (Development and Production).
+**Consequences:** The only AI keys are `OPENAI_API_KEY` and `OPENAI_MODEL`. The live site is checked after the next deploy.
