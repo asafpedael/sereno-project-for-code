@@ -4,14 +4,17 @@
 // M8: summary cards from the reply's "stats" (per role), the "Returning" tag for the manager,
 // and "View": a side panel with the order (manager: full details and "Manager notes";
 // agent: only the fields of his card, read-only).
+// M9: the manager changes the field agent of an approved order in the panel ("Save agent");
+// the agent sees only his and unassigned orders, with "My orders only" (on by default).
 import { getJson } from './api.js';
 import { el, clear } from './dom.js';
 import { formatTimeIL, formatDateIL, formatDayMonthIL, isSameDayIL } from './time.js';
-import { requireRole, bindLogout, staffGet } from './session.js';
+import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
 import { showingText, totalPages, pageNumbers, GAP } from './paging.js';
 import {
   returningTag, orderTag, dataItem, detailsGrid, aiPanel, missingFlightPanel, flightChangePanel,
   customerPanel, clearHistory, notesField, setLabels, servicesText, escortText,
+  loadAgents, agentField, agentNameFor, NOT_ASSIGNED,
 } from './order-details.js';
 
 const GENERIC_MESSAGE = 'Orders could not be loaded. Please try again.';
@@ -61,7 +64,9 @@ const showingNode = document.getElementById('showing');
 const pagerNode = document.getElementById('pager');
 const statsNode = document.getElementById('stats');
 const panelNode = document.getElementById('order-panel');
+const mineBox = document.getElementById('mine');
 
+let agents = null; // M9: manager only, the names for the panel
 let page = 1;
 let requestId = 0;
 let searchTimer = null;
@@ -189,6 +194,7 @@ function queryString() {
   if (statusSelect.value) params.status = statusSelect.value;
   if (fromInput.value) params.from = fromInput.value;
   if (toInput.value) params.to = toInput.value;
+  if (session.role === 'agent' && mineBox.checked) params.mine = '1';
   return Object.entries(params).map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 }
 
@@ -292,7 +298,43 @@ function panelHead(order) {
     el('div', { className: 'archive-panel__tags' },
       orderTag(order),
       order.is_returning_customer ? returningTag() : null,
+      order.assigned_to_me ? assignedTag() : null,
       close));
+}
+
+// M9 (plan D13, O5): the agent's own orders.
+function assignedTag() {
+  return el('span', { className: 'tag tag-returning' }, 'Assigned to you');
+}
+
+// M9 (plan D12): "Field agent" with "Save agent" for an approved order (assign_agent).
+function agentArea(order, message) {
+  const field = agentField(agents, order.assigned_agent_id);
+  const error = el('p', { className: 'field__error', attrs: { hidden: '' } });
+  const save = el('button', { className: 'btn btn-small btn-secondary', attrs: { type: 'button' } }, 'Save agent');
+  save.addEventListener('click', async () => {
+    error.hidden = true;
+    save.disabled = true;
+    try {
+      const data = await staffPost('/api/order-decision', { order_id: order.id, action: 'assign_agent', agent_id: field.value() });
+      order.assigned_agent_id = data.order.assigned_agent_id || null;
+      message.textContent = order.assigned_agent_id
+        ? `Agent saved for order ${order.reference}.`
+        : `Order ${order.reference} is now open to all agents.`;
+    } catch (err) {
+      if (err.status === 401) return;
+      if (err.status === 409) {
+        load(); // the order changed: reload the table (closes the panel)
+        return;
+      }
+      error.textContent = err.message || 'Something went wrong. Please try again.';
+      error.hidden = false;
+    } finally {
+      save.disabled = false;
+    }
+  });
+  return el('div', { className: 'agent-area' }, field.node,
+    el('div', { className: 'notes-field__actions' }, save), error);
 }
 
 // Manager (plan D10, D11): the Approvals details, read-only, plus the meeting time and the
@@ -304,13 +346,19 @@ function managerPanel(order) {
   let side = aiPanel(order);
   if (order.status === 'needs_clarification') side = missingFlightPanel(order);
   else if (order.flight_change_pending) side = flightChangePanel(order);
+  const extra = [dataItem('Meeting time', meetingText(order))];
+  // M9: a completed order shows who did it (read-only).
+  if (order.status === 'completed') {
+    extra.push(dataItem('Field agent', order.assigned_agent_id ? agentNameFor(order.assigned_agent_id, agents) : NOT_ASSIGNED));
+  }
   panelNode.append(
     panelHead(order),
-    detailsGrid(order, [dataItem('Meeting time', meetingText(order))]),
+    detailsGrid(order, extra),
     el('div', { className: 'details-panels' },
       customerPanel(order, (id) => openId === id),
       side),
     notes.node,
+    order.status === 'approved' ? agentArea(order, message) : null,
     message);
 }
 
@@ -381,6 +429,16 @@ async function start() {
     filtersChanged();
   });
   for (const input of [statusSelect, fromInput, toInput]) input.addEventListener('change', filtersChanged);
+  // M9 (plan D14, O2): "My orders only" for the agent, checked when the page opens.
+  if (session.role === 'agent') {
+    mineBox.checked = true;
+    mineBox.closest('.archive__mine').hidden = false;
+    mineBox.addEventListener('change', filtersChanged);
+  }
+  if (session.role === 'manager') {
+    const list = await loadAgents(); // before the rows, so the panel has the names
+    if (list !== null) agents = list;
+  }
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && openId) closePanel({ returnFocus: true });
   });

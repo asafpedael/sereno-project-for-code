@@ -7,6 +7,8 @@
 // M7: view=archive for both roles (manager: every status; agent: approved and completed,
 // limited view), with search, status and departure-date filters and 50 rows per page.
 // M8: the archive reply adds "stats" for the summary cards, counted over every matching order.
+// M9: a field agent sees only orders assigned to him or to nobody (view=approved and the
+// archive), and the archive has "My orders only" (mine=1) for him.
 import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { requireStaff } from '../lib/auth.js';
@@ -16,6 +18,7 @@ import {
   ORDER_SELECT, HISTORY_SELECT, MAX_PREVIOUS_ORDERS, toManagerView, toAgentView, byDeparture, byMeetingTime,
   flightChangePending, completedByCustomer, isReturningCustomer,
   archiveStatuses, archiveSearchConditions, archiveDateConditions, combineOrGroups, archiveStats,
+  agentVisibility,
 } from '../lib/orders-view.js';
 
 const PAGE_SIZE = 50;
@@ -83,17 +86,24 @@ async function archive(staff, req, res) {
   const parsed = validateArchiveQuery(req.query);
   if (parsed.error) return sendError(res, 400, 'bad_request', parsed.error);
   const { q, flightQ, status, from, to, page } = parsed.value;
+  const agentId = staff.role === 'agent' ? staff.user.id : null;
+  // M9 (plan D2, D14): "My orders only" keeps his own orders; otherwise his and the
+  // unassigned ones. The manager sees everything (mine is ignored).
+  const mine = Boolean(agentId) && parsed.value.mine;
 
   const allowed = archiveStatuses(staff.role);
   const flightIds = from || to ? await flightIdsBetween(from, to) : [];
   const orFilter = combineOrGroups([
     archiveSearchConditions(q, flightQ),
     archiveDateConditions(flightIds, from, to),
+    agentId && !mine ? agentVisibility(agentId) : null,
   ]);
 
+  // The page rows and the statistics use the same filter, so they always agree (ADR-29).
   const build = (select, options) => {
     let query = getSupabase().from('orders').select(select, options).in('status', allowed);
     if (status) query = query.eq('status', status);
+    if (mine) query = query.eq('assigned_agent_id', agentId);
     if (orFilter) query = query.or(orFilter);
     return query;
   };
@@ -117,8 +127,8 @@ async function archive(staff, req, res) {
   }
   if (error) throw error;
 
-  const orders = staff.role === 'agent'
-    ? data.map(toAgentView)
+  const orders = agentId
+    ? data.map((row) => toAgentView(row, agentId))
     : data.map((row) => toManagerView(row, { returning: isReturningCustomer(row, completed) }));
   return sendOk(res, { orders, page, page_size: PAGE_SIZE, total: count || 0, stats });
 }
@@ -158,14 +168,18 @@ export default withHandler(['GET'], async (req, res) => {
   }
 
   if (view === 'approved') {
-    const { data, error } = await getSupabase()
+    const agentId = staff.role === 'agent' ? staff.user.id : null;
+    let query = getSupabase()
       .from('orders')
       .select(ORDER_SELECT)
-      .eq('status', 'approved')
+      .eq('status', 'approved');
+    // M9 (plan D2): the agent gets his orders and the unassigned ones only.
+    if (agentId) query = query.or(agentVisibility(agentId));
+    const { data, error } = await query
       .order('final_time', { ascending: true })
       .limit(PAGE_SIZE);
     if (error) throw error;
-    const orders = staff.role === 'agent' ? data.map(toAgentView) : await managerViews(data);
+    const orders = agentId ? data.map((row) => toAgentView(row, agentId)) : await managerViews(data);
     return sendOk(res, { orders: orders.sort(byMeetingTime), page: 1 });
   }
 

@@ -386,3 +386,20 @@
 .agent-tabs__tab:hover { color: var(--color-cream); }
 .agent-tabs__tab[aria-current="page"] { color: var(--color-cream); border-bottom-color: var(--color-gold); }
 .agent__archive-link { margin-top: var(--space-4); text-align: center; font-size: var(--fs-small); font-weight: 700; }
+
+/* M9: field agent assignment */
+/* Approvals: "Field agent" under "Meeting time" in the left column (DOM: meeting, notes, agent). */
+.agent-field .select { width: 100%; }
+.agent-area { display: flex; flex-direction: column; gap: var(--space-1); }
+/* Archive filter row: "My orders only" (agent only), as small as the other filters. */
+.archive__mine { flex: 0 0 auto; }
+.archive__mine .check { min-height: var(--control-height-small); }
+/* Agent card: "Assigned to you" next to the customer name. */
+.agent-card__tag { margin-left: 8px; vertical-align: middle; font-weight: 700; }
+/* M9 fix (Asaf, 24.11.2026): the open order can be closed; with none open, a short hint
+   sits where the details go (wide screens only; on phones the list is enough). */
+.details__head-tags { display: flex; align-items: center; gap: var(--space-1); }
+.approvals__placeholder { display: none; }
+@media (min-width: 900px) {
+  .approvals__placeholder:not([hidden]) { display: block; margin: 0; padding: var(--space-4); }
+}

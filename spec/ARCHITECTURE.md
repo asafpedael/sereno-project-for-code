@@ -176,13 +176,14 @@ customers 1 ───< N orders N >─── 1 flights
 | `recommended_time` | timestamptz | שעת מפגש שחושבה בקוד. ריק כשאין טיסה |
 | `final_time` | timestamptz | שעת המפגש שאושרה. ריקה עד אישור |
 | `manager_notes` | text | הערות מנהל. מוצגות לנציג, **לא נשלחות ללקוח** |
+| `assigned_agent_id` | uuid, FK ל-`auth.users`, `on delete set null`, **יכול להיות ריק** | הנציג המשובץ (Milestone 9). ריק = לא שובץ, וכל הנציגים רואים את ההזמנה. נקבע באישור או בהחלפה מהארכיון, ונרשם ב"הושלם" כשהיה ריק |
 | `ai_output` | jsonb | פלט ה-AI (מבנה בסעיף 4) |
 | `approved_departure_at` | timestamptz | שעת ההמראה בעת האישור. בסיס להשוואה בזיהוי שינוי טיסה |
 | `ignored_departure_at` | timestamptz | שעת המראה חדשה שהמנהל בחר להתעלם ממנה |
 | `decided_at` | timestamptz | |
 | `created_at` | timestamptz, ברירת מחדל `now()` | |
 
-אינדקסים: `orders(status)`, `orders(customer_id)`, `orders(flight_id)`, `orders(created_at desc)`.
+אינדקסים: `orders(status)`, `orders(customer_id)`, `orders(flight_id)`, `orders(created_at desc)`, `orders(assigned_agent_id)`.
 
 ### מעברי סטטוס
 
@@ -190,10 +191,11 @@ customers 1 ───< N orders N >─── 1 flights
 |---|---|---|---|
 | (יצירה) | `pending` | המערכת | הטיסה נמצאה |
 | (יצירה) | `needs_clarification` | המערכת | הטיסה לא נמצאה |
-| `pending` | `approved` | מנהל | חובה `flight_id` לא ריק. נקבעים `final_time`, `approved_departure_at`, `decided_at` |
+| `pending` | `approved` | מנהל | חובה `flight_id` לא ריק. נקבעים `final_time`, `approved_departure_at`, `decided_at`. אם נבחר נציג, גם `assigned_agent_id` |
 | `pending`, `needs_clarification` | `rejected` | מנהל | |
 | `approved` | `approved` | מנהל | אישור שינוי טיסה בלבד: מתעדכנים `approved_departure_at`, `recommended_time`, `final_time` |
-| `approved` | `completed` | נציג | פעולת `complete` (החלטה 8) |
+| `approved` | `approved` | מנהל | החלפת נציג בלבד (`assign_agent`): מתעדכן `assigned_agent_id` |
+| `approved` | `completed` | נציג | פעולת `complete` (החלטה 8), רק להזמנה לא משובצת או משובצת לאותו נציג. הזמנה לא משובצת נרשמת על שמו |
 
 ### זיהוי שינוי טיסה (FR-36 עד FR-39)
 
@@ -323,6 +325,8 @@ $$;
 
 הפונקציה מחזירה שורה אחת אם העדכון הצליח, ואפס שורות אם התנאי כבר לא מתקיים. במקרה של אפס שורות `api/order-decision.js` מחזירה `409 conflict`, ולא שולחת מייל. (הפעולות `add_note` ו-`confirm_flight_missing` הן עדכון רגיל או לא משנות את הסטטוס, ולכן לא צריכות פונקציה כזו.)
 
+Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decide_order` את `p_agent_id` (ברירת מחדל ריקה, נשמר רק באישור), ול-`complete_order` את `p_agent_id` (משלים רק הזמנה לא משובצת או של אותו נציג, ורושם אותו כשהייתה לא משובצת).
+
 ### נתוני דמה
 
 הקובץ `supabase/seed/seed.sql`, מבוסס על `sereno-demo-data.xlsx` (8 לקוחות, 10 טיסות, 15 הזמנות). לאקסל יש גיליון לכל טבלה (`customers`, `flights`, `orders`) עם שמות עמודות זהים למסד, וגיליון `test_cases` שמסביר מה כל הזמנה בודקת ולא נטען למסד. כללי הייבוא:
@@ -368,13 +372,14 @@ $$;
 | `GET /api/config` | כן | כן | כן |
 | `GET /api/flights` | כן | כן | כן |
 | `POST /api/submit-order` | כן | כן | כן |
-| `GET /api/orders` (תור או רשימה) | לא | הזמנות `approved` ו-`completed` בלבד | כל ההזמנות |
-| `GET /api/orders?id=` (פרטי הזמנה) | לא | רק הזמנה `approved` או `completed` | כל הזמנה, כולל היסטוריית הלקוח |
-| `POST /api/order-decision` | לא | רק `action = complete` (כל פעולה אחרת `403`) | כן, כל הפעולות חוץ מ-`complete` |
+| `GET /api/orders` (תור או רשימה) | לא | הזמנות `approved` ו-`completed` ששובצו לו או שלא שובצו | כל ההזמנות |
+| `GET /api/orders?id=` (פרטי הזמנה) | לא | לא (`403`) | כל הזמנה, כולל היסטוריית הלקוח |
+| `POST /api/order-decision` | לא | רק `action = complete` (כל פעולה אחרת `403`), ורק להזמנה שלו או לא משובצת (אחרת `404`) | כן, כל הפעולות חוץ מ-`complete` |
+| `GET /api/agents` | לא | לא (`403`) | כן: רשימת הנציגים (מזהה ושם) |
 
 הגבלות על מה שמוחזר לנציג (צמצום מידע): שם, טלפון, טיסה, נוסעים, מזוודות, שירותים, היקף ליווי, שעת מפגש והערות מנהל. **ללא** מייל הלקוח, ללא `ai_output`, ללא היסטוריית לקוח.
 
-הערה: הסינון "רק הזמנות שליווה בעצמו" בארכיון הנציג (FR-35) דורש שיבוץ נציג, ואין שיבוץ ב-MVP. עד אז ההרשאה היא לפי תפקיד, כפי שמופיע במטריצה.
+הערה (Milestone 9): נציג מזוהה לפי מזהה המשתמש שלו ב-Supabase Auth, מתוך הטוקן. רשימת הנציגים נקראת בשרת בלבד (`auth.admin`), ונשלחת רק למנהל. לנציג לא נשלחים מזהה או מייל של נציג אחר: בהזמנות שלו מופיע רק `assigned_to_me`. בארכיון הנציג יש סינון "My orders only" (`mine=1`).
 
 ### הגנה על הנתונים בכל הרמות
 
@@ -541,7 +546,8 @@ $$;
 
 | פרמטר | משמעות |
 |---|---|
-| `view` | `inbox` (מנהל בלבד: `pending`, `needs_clarification` וכן `approved` עם שינוי טיסה ממתין), `approved` (נציג: `approved` בלבד, ממוין לפי `final_time`), `archive` (כל ההזמנות המותרות לתפקיד) |
+| `view` | `inbox` (מנהל בלבד: `pending`, `needs_clarification` וכן `approved` עם שינוי טיסה ממתין), `approved` (נציג: `approved` בלבד, ששובצו לו או שלא שובצו, ממוין לפי `final_time`), `archive` (כל ההזמנות המותרות לתפקיד) |
+| `mine` | ארכיון, נציג בלבד: `1` = רק הזמנות ששובצו לו |
 | `q` | חיפוש לפי שם לקוח או מספר טיסה, עד 40 תווים |
 | `status` | סינון לפי קוד סטטוס |
 | `from`, `to` | סינון לפי תאריך המראה (ISO) |
@@ -561,6 +567,7 @@ $$;
 } ], "page": 1 } }
 ```
 `customer.full_name` ו-`customer.phone` נלקחים מ-`contact_name` ו-`contact_phone` של ההזמנה (החלטה 17). כך גם `customer_first_name` בקלט ל-AI ו-`customer_name` ב-Webhook ל-n8n.
+למנהל נוסף `assigned_agent_id` (או `null`). לנציג נוסף `assigned_to_me` (true/false), בלי מזהה של נציג.
 לנציג: ללא `customer.email`, ללא `ai_output`, ללא `is_returning_customer`, ללא היסטוריה. בפרטי הזמנה למנהל (`id=`) נוספת רשימת `previous_orders` (עד 5 הזמנות אחרות של אותו לקוח, בכל סטטוס, בלי ההזמנה הנוכחית).
 `is_returning_customer` מחושב בקוד: שאילתה אחת שסופרת, לפי `customer_id` של השורות שהוחזרו, הזמנות אחרות בסטטוס `completed` (החלטה 11).
 להזמנות `pending`, `recommended_time` בתשובה מחושב מחדש ב-`meeting-time.js` לפי `flights.departure_at` העדכני, ולא נלקח מהעמודה (החלטה 14).
@@ -571,19 +578,23 @@ $$;
 
 | `action` | שדות נוספים | תנאי | פעולה | מייל |
 |---|---|---|---|---|
-| `approve` | `final_time` (ISO, ברירת מחדל `recommended_time` שחושב מחדש), `manager_notes` (אופציונלי) | סטטוס `pending` וגם `flight_id` לא ריק | חישוב מחדש של `recommended_time` לפי `flights.departure_at` העדכני, ואז `rpc decide_order` ל-`approved` עם `p_recommended`, `approved_departure_at = flights.departure_at` | `customer_approved` |
+| `approve` | `final_time` (ISO, ברירת מחדל `recommended_time` שחושב מחדש), `manager_notes` (אופציונלי), `agent_id` (אופציונלי, נציג קיים) | סטטוס `pending` וגם `flight_id` לא ריק | חישוב מחדש של `recommended_time` לפי `flights.departure_at` העדכני, ואז `rpc decide_order` ל-`approved` עם `p_recommended`, `approved_departure_at = flights.departure_at` | `customer_approved` |
 | `reject` | `manager_notes` (אופציונלי) | סטטוס `pending` או `needs_clarification` | `rpc decide_order` ל-`rejected` | `customer_rejected` |
 | `add_note` | `manager_notes` | כל סטטוס | עדכון `manager_notes` | אין |
 | `confirm_flight_missing` | | סטטוס `needs_clarification`, ו-`ai_output.clarification.sent_at` ריק | קריאת `clarification_draft`, שמירה ב-`ai_output.clarification` | `customer_clarification` |
 | `approve_flight_change` | `final_time` (אופציונלי) | `flight_change_pending` | חישוב מחדש של `recommended_time`, `rpc resolve_flight_change` עם `p_ignore = false` | `customer_flight_change` |
 | `ignore_flight_change` | | `flight_change_pending` | `rpc resolve_flight_change` עם `p_ignore = true` | אין |
-| `complete` (נציג) | | סטטוס `approved` | `rpc complete_order` | אין |
+| `assign_agent` | `agent_id` (או `null` לביטול) | סטטוס `approved` | עדכון `assigned_agent_id` | אין |
+| `complete` (נציג) | | סטטוס `approved`, ולא משובצת לנציג אחר (אחרת `404`) | `rpc complete_order` עם מזהה הנציג | אין |
 
 - `final_time` חייב להיות תאריך ושעה תקינים, ומוקדם משעת ההמראה. אחרת `400` עם ההודעה "Meeting time must be before departure". הדף שולח את מה שהמנהל הזין בשעון ישראל, מומר ל-ISO (החלטה 13).
 - `complete` שנשלח פעמיים, או להזמנה שאינה `approved`, מחזיר `409`.
 - התשובה: `{ "ok": true, "data": { "order": { ... }, "email_sent": true } }`. כש-`email_sent` הוא `false` המסך מציג אזהרה (החלטה 10).
 - מעבר לא חוקי או `rpc` שלא החזיר שורה מחזירים `409 conflict`.
 - `confirm_flight_missing` כשנשלח כבר: `409`.
+
+#### `GET /api/agents`
+מנהל בלבד. מחזיר את משתמשי Supabase Auth עם התפקיד `agent`: `{ "ok": true, "data": { "agents": [ { "id": "uuid", "name": "Dana K." } ] } }`. השם הוא `user_metadata.full_name` אם נקבע, אחרת המייל. ממוין לפי שם.
 
 ### 5.2 קריאה ל-n8n
 
@@ -720,7 +731,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── flights.js               GET  /api/flights
 │   ├── submit-order.js          POST /api/submit-order
 │   ├── orders.js                GET  /api/orders
-│   └── order-decision.js        POST /api/order-decision
+│   ├── order-decision.js        POST /api/order-decision
+│   └── agents.js                GET  /api/agents (מנהל בלבד)
 ├── lib/                         קוד משותף לפונקציות (לא נחשף ככתובת)
 │   ├── supabase.js              הלקוח היחיד ל-Supabase (מפתח סודי)
 │   ├── auth.js                  אימות טוקן, קריאת תפקיד, requireRole
@@ -757,9 +769,11 @@ sereno/                          ריפו ציבורי, ענף main
 ├── supabase/
 │   ├── migrations/
 │   │   ├── 001_schema.sql       טבלאות, RLS, grants
-│   │   └── 002_functions.sql    decide_order, resolve_flight_change
+│   │   ├── 002_functions.sql    decide_order, resolve_flight_change
+│   │   └── 003_agent_assignment.sql  שיבוץ נציג (Milestone 9)
 │   └── seed/
-│       └── seed.sql             נתוני דמה
+│       ├── seed.sql             נתוני דמה
+│       └── assign-demo.sql      שיבוץ לבדיקה (Milestone 9)
 ├── n8n/
 │   └── sereno-notifications.json   ייצוא התהליך, ללא Credentials
 ├── tests/                       בדיקות קוד (`node --test`), למשל meeting-time.test.js
@@ -980,3 +994,23 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** ADR-14 moved the AI layer to OpenAI and noted that `GEMINI_API_KEY` and `GEMINI_MODEL` could be removed.
 **Decision:** M8 (24.11.2026): the code has no Gemini reference. `.env.example` has no `GEMINI_` line, and Asaf removed both keys from `.env.local` and Vercel (Development and Production).
 **Consequences:** The only AI keys are `OPENAI_API_KEY` and `OPENAI_MODEL`. The live site is checked after the next deploy.
+
+### ADR-33: Agent assignment is one column and two updated functions
+**Context:** Feature 28 (M9): the manager may assign an approved order to one field agent, on approval or later; PRD and ARCHITECTURE said "no assignment in the MVP" (updated with Asaf's approval, 24.11.2026). There is one Supabase project, also used by the live site.
+**Decision:** `orders.assigned_agent_id` (uuid → `auth.users`, `on delete set null`, indexed), added by `supabase/migrations/003_agent_assignment.sql`, which also replaces `decide_order` (new `p_agent_id`, saved only with an approval) and `complete_order` (new `p_agent_id`: completes only an unassigned order or the agent's own, and records the agent on an unassigned one). Both new parameters default to null, so the code without M9 kept working between the migration and the push. `assign_agent` (manager, `approved` only) is one conditional update; a chosen agent is checked with `auth.admin.getUserById`. No email changes. This supersedes ADR-15's "all agents see all approved orders".
+**Consequences:** Approval and assignment are saved together. Deleting an agent user returns his orders to everyone. Orders completed before M9 belong to nobody.
+
+### ADR-34: What an agent sees, and the agent list stays on the server
+**Context:** M9: an agent sees his orders and unassigned ones, never another agent's; another agent's email must never reach an agent's browser.
+**Decision:** The agent is identified by the user id of his verified token. `agentVisibility` in `lib/orders-view.js` (`assigned_agent_id is null or = his id`) is added to `view=approved` and to the archive filter (with `mine=1` the archive keeps only his id); the page rows and the statistics use the same filter (ADR-29). Agent rows carry only `assigned_to_me`; manager rows carry `assigned_agent_id`. `GET /api/agents` (manager only) reads the users with `auth.admin.listUsers` and returns `{ id, name }` of the `agent` users (`user_metadata.full_name`, else the email). "Mark completed" on another agent's order answers `404` (plan O6); `?id=` stays `403` for the agent.
+**Consequences:** One rule for both agent screens. The agent cannot learn who else has orders. A display name per agent is optional, set by Asaf in the SQL Editor.
+
+### ADR-35: "My orders only" is on by default and the agent's cards follow it
+**Context:** Asaf asked (24.11.2026) that the agent's archive cards count only the orders he handled himself (ADR-29).
+**Decision:** The agent's archive has a "My orders only" checkbox, checked when the page opens (plan O2 (a)); the cards keep following the table, so by default they count only his orders, and unticking adds the unassigned ones. The Approvals screen gets a "Field agent" menu (default "Not assigned (all agents)"), and the archive panel "Field agent" with "Save agent" for approved orders and a read-only line for completed ones; the agent card and panel show "Assigned to you". The menu is shared in `order-details.js`.
+**Consequences:** The cards never disagree with the table. With the box ticked an agent sees no unassigned approved orders in the archive; his Orders screen still shows them.
+
+### ADR-36: On the Approvals screen no order opens by itself
+**Context:** During the M9 check Asaf asked to be able to close the open order and see only the list, opening and closing orders himself (24.11.2026). Until then the first order always opened, after a decision the next one opened, and ADR-31 opened the first match of a filter.
+**Decision:** The page opens with no order selected and a short hint "Select an order to see its details." in the details column (wide screens). An order opens by clicking it and closes with a second click on it, the × button next to its status tag, or Escape (not while typing in a field). After a decision, and when a filter hides the open order, nothing opens. An order decided with an unsent email still stays open with its warning (decision 10). Browser only.
+**Consequences:** Replaces the selection rule of ADR-31. One click more to open each order.

@@ -8,7 +8,7 @@ import {
 import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
 import {
   orderTag, returningTag, plural, departureText, detailsGrid, aiPanel, missingFlightPanel, flightChangePanel,
-  customerPanel, clearHistory, notesField, setLabels,
+  customerPanel, clearHistory, notesField, setLabels, loadAgents, agentField, agentNameFor,
 } from './order-details.js';
 import { filterInbox } from './inbox-filter.js';
 
@@ -35,6 +35,8 @@ const EMPTY_FILTER = 'No orders match this filter.';
 
 let orders = [];
 let selectedId = null;
+// M9 (plan D11): the field agents for the "Field agent" menu ([{ id, name }] or 'error').
+let agents = null;
 // A just-decided order whose customer email was not sent: it left the list but stays open
 // in the details with the warning, so the manager sees it (DESIGN, decision 10).
 let heldOrder = null;
@@ -54,12 +56,24 @@ function shownOrders() {
   return filterInbox(orders, filterSelect.value);
 }
 
-// When the open order is not in the filtered list, the first one there opens (or none).
-// A held order (decided, email not sent) stays open.
+// When the open order is not in the filtered list, it closes. Nothing opens by itself
+// (M9 fix, Asaf 24.11.2026: the manager opens and closes orders). A held order (decided,
+// email not sent) stays open.
 function keepSelectionShown() {
   const shown = shownOrders();
   if (heldOrder && heldOrder.id === selectedId) return;
-  if (!shown.some((o) => o.id === selectedId)) selectedId = shown.length ? shown[0].id : null;
+  if (!shown.some((o) => o.id === selectedId)) selectedId = null;
+}
+
+// Closes the open order: the list stays, with no order selected. Focus goes back to its row.
+function closeDetails() {
+  const id = selectedId;
+  selectedId = null;
+  heldOrder = null;
+  renderList();
+  renderDetails();
+  const button = [...listNode.querySelectorAll('.order-item')].find((b) => b.dataset.id === id);
+  if (button) button.focus();
 }
 
 function renderList() {
@@ -80,6 +94,11 @@ function renderList() {
     el('span', { className: 'order-item__tags' }, orderTag(order),
       order.is_returning_customer ? returningTag() : null));
     button.addEventListener('click', () => {
+      // A second click on the open order closes it.
+      if (order.id === selectedId) {
+        closeDetails();
+        return;
+      }
       selectOrder(order.id);
       // One-column layout (phone): bring the details into view below the list.
       if (window.matchMedia('(max-width: 899px)').matches) detailsNode.scrollIntoView({ block: 'start' });
@@ -102,17 +121,26 @@ function selectOrder(id) {
 function renderDetails() {
   clear(detailsNode);
   const order = orders.find((o) => o.id === selectedId) || (heldOrder && heldOrder.id === selectedId ? heldOrder : null);
+  const placeholder = document.getElementById('details-empty');
   if (!order) {
     detailsNode.hidden = true;
+    placeholder.hidden = orders.length === 0;
     return;
   }
   detailsNode.hidden = false;
+  placeholder.hidden = true;
+
+  const close = el('button', {
+    className: 'archive-panel__close',
+    attrs: { type: 'button', 'aria-label': 'Close order details' },
+  }, '×');
+  close.addEventListener('click', closeDetails);
 
   const missing = order.status === 'needs_clarification';
   detailsNode.append(
     el('div', { className: 'details__head' },
       el('h2', { className: 'h3' }, `Order ${order.reference}`),
-      orderTag(order)),
+      el('div', { className: 'details__head-tags' }, orderTag(order), close)),
     detailsGrid(order),
     el('div', { className: 'details-panels' },
       customerPanel(order, (id) => selectedId === id),
@@ -219,6 +247,10 @@ function flightChangeArea(order) {
   const approveButton = el('button', { className: 'btn btn-primary', attrs: { type: 'button' } }, 'Approve change');
   const showFormError = (message) => { formError.textContent = message; formError.hidden = false; };
   const notes = notesField(order, noteSaved(order));
+  // M9 fix (Asaf, 24.11.2026): a new flight time may need another agent. The menu starts on
+  // the current agent; a different choice is saved (assign_agent) before Ignore / Approve change.
+  const current = order.assigned_agent_id || null;
+  const agent = agentField(agents, current);
 
   async function send(body) {
     meeting.clearErrors();
@@ -226,15 +258,21 @@ function flightChangeArea(order) {
     ignoreButton.disabled = true;
     approveButton.disabled = true;
     try {
+      const chosenAgent = agent.value();
+      let agentNote = '';
+      if (chosenAgent !== current) {
+        await staffPost('/api/order-decision', { order_id: order.id, action: 'assign_agent', agent_id: chosenAgent });
+        agentNote = chosenAgent ? ` Agent: ${agentNameFor(chosenAgent, agents)}.` : ' Open to all agents.';
+      }
       const data = await staffPost('/api/order-decision', body);
       if (body.action === 'ignore_flight_change') {
-        setStatus(`Flight change ignored for order ${order.reference}.`);
+        setStatus(`Flight change ignored for order ${order.reference}.${agentNote}`);
         removeOrder(order.id);
       } else if (data.email_sent) {
-        setStatus(`Order ${order.reference} updated. Email sent to the customer.`);
+        setStatus(`Order ${order.reference} updated. Email sent to the customer.${agentNote}`);
         removeOrder(order.id);
       } else {
-        setStatus(`Order ${order.reference} updated.`);
+        setStatus(`Order ${order.reference} updated.${agentNote}`);
         holdOrder(data.order, CHANGE_EMAIL_NOT_SENT);
       }
     } catch (err) {
@@ -255,7 +293,7 @@ function flightChangeArea(order) {
   ignoreButton.addEventListener('click', () => send({ order_id: order.id, action: 'ignore_flight_change' }));
 
   return el('div', { className: 'decision' },
-    el('div', { className: 'decision__fields' }, meeting.node, notes.node),
+    el('div', { className: 'decision__fields' }, meeting.node, notes.node, agent.node),
     el('div', { className: 'decision__actions' }, formError,
       el('div', { className: 'decision__buttons' }, ignoreButton, approveButton)));
 }
@@ -360,6 +398,8 @@ function decisionArea(order) {
   }
 
   const notes = notesField(order, noteSaved(order));
+  // M9 (plan D11): optional; "Not assigned" leaves the order to all agents.
+  const agent = agentField(agents);
 
   async function send(body) {
     clearErrors();
@@ -367,13 +407,17 @@ function decisionArea(order) {
     approveButton.disabled = true;
     try {
       // The note goes with the decision (an empty box keeps any earlier note).
-      const data = await staffPost('/api/order-decision', { ...body, manager_notes: notes.value() });
+      const request = { ...body, manager_notes: notes.value() };
+      const agentId = body.action === 'approve' ? agent.value() : null;
+      if (agentId) request.agent_id = agentId;
+      const data = await staffPost('/api/order-decision', request);
       const verb = body.action === 'approve' ? 'approved' : 'rejected';
+      const forAgent = agentId ? ` for ${agentNameFor(agentId, agents)}` : '';
       if (data.email_sent) {
-        setStatus(`Order ${order.reference} ${verb}. Email sent to the customer.`);
+        setStatus(`Order ${order.reference} ${verb}${forAgent}. Email sent to the customer.`);
         removeOrder(order.id);
       } else {
-        setStatus(`Order ${order.reference} ${verb}.`);
+        setStatus(`Order ${order.reference} ${verb}${forAgent}.`);
         holdOrder(data.order, EMAIL_NOT_SENT);
       }
     } catch (err) {
@@ -401,18 +445,15 @@ function decisionArea(order) {
   rejectButton.addEventListener('click', () => send({ order_id: order.id, action: 'reject' }));
 
   return el('div', { className: 'decision' },
-    el('div', { className: 'decision__fields' }, field, notes.node),
+    el('div', { className: 'decision__fields' }, field, notes.node, agent.node),
     el('div', { className: 'decision__actions' }, formError,
       el('div', { className: 'decision__buttons' }, rejectButton, approveButton)));
 }
 
-// After a decision: drop the order and select the one that took its place.
+// After a decision: drop the order; no other order opens by itself (M9 fix).
 function removeOrder(id) {
-  const index = shownOrders().findIndex((o) => o.id === id);
   orders = orders.filter((o) => o.id !== id);
-  const shown = shownOrders();
-  const next = shown[Math.min(Math.max(index, 0), shown.length - 1)];
-  selectedId = next ? next.id : null;
+  selectedId = null;
   renderList();
   renderDetails();
 }
@@ -441,7 +482,9 @@ async function loadOrders() {
   refreshButton.disabled = true;
   listError.hidden = true;
   try {
-    const data = await staffGet('/api/orders?view=inbox');
+    // M9: the agent list is read again with every Refresh (a new agent user shows up).
+    const [data, agentList] = await Promise.all([staffGet('/api/orders?view=inbox'), loadAgents()]);
+    if (agentList !== null) agents = agentList;
     orders = data.orders;
     heldOrder = null;
     clearHistory(); // Refresh also reloads the customer history
@@ -468,6 +511,11 @@ async function start() {
   refreshButton.addEventListener('click', () => {
     setStatus('');
     loadOrders();
+  });
+  document.addEventListener('keydown', (event) => {
+    // Not while typing in a field, so a half-written note or time is not lost by accident.
+    const typing = event.target.closest && event.target.closest('input, textarea, select');
+    if (event.key === 'Escape' && selectedId && !typing) closeDetails();
   });
   try {
     const config = await getJson('/api/config');

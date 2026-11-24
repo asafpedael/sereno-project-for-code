@@ -201,6 +201,49 @@ async function loadHistory(order, isCurrent) {
   if (node && isCurrent(order.id)) fillHistory(node, order);
 }
 
+// ---------- Field agent (M9, plan D11, D12) ----------
+
+export const NOT_ASSIGNED = 'Not assigned (all agents)';
+
+// The agents from GET /api/agents ([{ id, name }]); null until loaded, 'error' if it failed.
+export async function loadAgents() {
+  try {
+    const data = await staffGet('/api/agents');
+    return Array.isArray(data.agents) ? data.agents : [];
+  } catch (err) {
+    if (err.status === 401) return null; // going to the login page
+    return 'error';
+  }
+}
+
+// The name of an order's agent, "–" when none, "Unknown agent" when the user is gone.
+export function agentNameFor(agentId, agents) {
+  if (!agentId) return '–';
+  const found = Array.isArray(agents) ? agents.find((a) => a.id === agentId) : null;
+  return found ? found.name : 'Unknown agent';
+}
+
+// "Field agent" menu: "Not assigned (all agents)" first, then the agents. selectedId keeps an
+// agent that is no longer in the list as "Unknown agent", so saving does not change it by
+// accident. value() is the chosen id, or null.
+export function agentField(agents, selectedId = null) {
+  const list = Array.isArray(agents) ? agents : [];
+  const select = el('select', { className: 'input select', attrs: { id: 'agent-select', 'aria-describedby': 'agent-hint' } },
+    el('option', { attrs: { value: '' } }, NOT_ASSIGNED),
+    ...list.map((a) => el('option', { attrs: { value: a.id } }, a.name)));
+  if (selectedId && !list.some((a) => a.id === selectedId)) {
+    select.append(el('option', { attrs: { value: selectedId } }, 'Unknown agent'));
+  }
+  select.value = selectedId || '';
+  const hint = el('p', { className: 'field__hint', attrs: { id: 'agent-hint' } },
+    agents === 'error' ? 'Agent list could not be loaded.' : '');
+  const node = el('div', { className: 'field agent-field' },
+    el('label', { className: 'field__label', attrs: { for: 'agent-select' } }, 'Field agent'),
+    select,
+    hint);
+  return { node, select, value: () => select.value || null };
+}
+
 // ---------- Manager notes (M6, plan D11) ----------
 
 // "Manager notes" box with "Save note" (add_note, any status). value() is what Approve and

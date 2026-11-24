@@ -60,6 +60,10 @@
           <label class="archive__date-label" for="to">To</label>
           <input class="input" id="to" name="to" type="date">
         </div>
+        <!-- M9: field agent only (shown by archive.js). -->
+        <div class="archive__mine" hidden>
+          <label class="check"><input class="check__input" id="mine" name="mine" type="checkbox"> My orders only</label>
+        </div>
       </form>
       <p class="field__error archive__filter-error" id="filter-error" role="alert" hidden></p>
 

@@ -18,8 +18,8 @@ const err = (query) => {
 };
 
 test('empty archive query gives defaults', () => {
-  assert.deepEqual(ok({}), { q: '', flightQ: '', status: null, from: null, to: null, page: 1 });
-  assert.deepEqual(ok({ q: '', status: '', from: '', to: '', page: '' }), { q: '', flightQ: '', status: null, from: null, to: null, page: 1 });
+  assert.deepEqual(ok({}), { q: '', flightQ: '', status: null, from: null, to: null, page: 1, mine: false });
+  assert.deepEqual(ok({ q: '', status: '', from: '', to: '', page: '' }), { q: '', flightQ: '', status: null, from: null, to: null, page: 1, mine: false });
 });
 
 test('search text is cleaned and the flight form is compact upper case', () => {

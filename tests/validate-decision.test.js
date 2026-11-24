@@ -7,7 +7,7 @@ const ID = 'A1B2C3D4-0000-4000-8000-000000000001';
 
 test('valid approve without a meeting time (server uses the recomputed one)', () => {
   assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'approve' }).value,
-    { order_id: ID.toLowerCase(), action: 'approve', final_time: null, manager_notes: null });
+    { order_id: ID.toLowerCase(), action: 'approve', final_time: null, manager_notes: null, agent_id: null });
 });
 
 test('valid approve with a meeting time, Z or offset', () => {
@@ -29,7 +29,7 @@ test('bad body or order id', () => {
 
 test('complete is accepted (M4)', () => {
   assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'complete' }).value,
-    { order_id: ID.toLowerCase(), action: 'complete', final_time: null, manager_notes: null });
+    { order_id: ID.toLowerCase(), action: 'complete', final_time: null, manager_notes: null, agent_id: null });
 });
 
 test('meeting time is refused with complete', () => {
@@ -45,7 +45,7 @@ test('unknown actions are refused', () => {
 test('M5 actions are accepted', () => {
   for (const action of ['confirm_flight_missing', 'approve_flight_change', 'ignore_flight_change']) {
     assert.deepEqual(validateDecisionBody({ order_id: ID, action }).value,
-      { order_id: ID.toLowerCase(), action, final_time: null, manager_notes: null }, action);
+      { order_id: ID.toLowerCase(), action, final_time: null, manager_notes: null, agent_id: null }, action);
   }
 });
 
@@ -71,7 +71,7 @@ test('meeting time is refused with reject', () => {
 
 test('add_note is accepted with a note, trimmed', () => {
   assert.deepEqual(validateDecisionBody({ order_id: ID, action: 'add_note', manager_notes: '  Extra margin needed \n' }).value,
-    { order_id: ID.toLowerCase(), action: 'add_note', final_time: null, manager_notes: 'Extra margin needed' });
+    { order_id: ID.toLowerCase(), action: 'add_note', final_time: null, manager_notes: 'Extra margin needed', agent_id: null });
 });
 
 test('add_note with an empty note clears it; without the field it is refused', () => {

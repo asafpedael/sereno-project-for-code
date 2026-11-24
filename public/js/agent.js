@@ -74,7 +74,9 @@ function card(order, index) {
         el('span', { className: 'agent-card__label' }, 'Departure'),
         el('span', { className: 'agent-card__departure-time' }, departureText))),
     el('div', { className: 'agent-card__person' },
-      el('span', { className: 'agent-card__name' }, order.customer.full_name),
+      el('span', { className: 'agent-card__name' }, order.customer.full_name,
+        // M9 (plan D13, O5): his own orders; unassigned orders have no tag.
+        order.assigned_to_me ? el('span', { className: 'tag tag-returning agent-card__tag' }, 'Assigned to you') : null),
       el('a', { className: 'agent-card__phone', attrs: { href: telHref(order.customer.phone) } }, order.customer.phone)),
     el('div', { className: 'agent-card__grid' },
       item('Flight', flightText),

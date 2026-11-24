@@ -6,13 +6,15 @@
 // M5: reject from "needs_clarification", confirm_flight_missing (clarification email) and
 // approve/ignore of a flight time change.
 // M6: add_note (manager, any status, no email), and manager_notes saved with approve/reject.
+// M9: approve may assign a field agent (agent_id), assign_agent changes it on an approved
+// order, and an agent may complete only an order assigned to him or to nobody.
 import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { requireStaff, roleMayDecide } from '../lib/auth.js';
 import { validateDecisionBody } from '../lib/validate.js';
 import {
   ORDER_SELECT, toManagerView, toAgentView, flightChangePending, clarificationSent,
-  completedByCustomer, isReturningCustomer,
+  completedByCustomer, isReturningCustomer, isAgentUser,
 } from '../lib/orders-view.js';
 import { meetingTime } from '../public/js/meeting-time.js';
 import {
@@ -28,6 +30,15 @@ const NOT_COMPLETABLE = 'This order is not approved or was already completed.';
 const CLARIFICATION_DONE = 'The clarification email was already sent, or the order was already decided.';
 const CHANGE_DONE = 'This flight change was already handled.';
 const REJECTABLE = ['pending', 'needs_clarification'];
+const AGENT_NOT_FOUND = 'This field agent was not found.';
+const NOT_APPROVED = 'This order is no longer approved.';
+
+// M9 (plan D4): the chosen user must exist and still have the role "agent".
+async function isCurrentAgent(userId) {
+  const { data, error } = await getSupabase().auth.admin.getUserById(userId);
+  if (error || !data || !data.user) return false;
+  return isAgentUser(data.user);
+}
 
 function readBody(req) {
   try {
@@ -151,10 +162,29 @@ export default withHandler(['POST'], async (req, res) => {
 
   const checked = validateDecisionBody(body);
   if (checked.error) return sendError(res, 400, 'bad_request', checked.error);
-  const { order_id: orderId, final_time: requestedFinal, manager_notes: notes } = checked.value;
+  const {
+    order_id: orderId, final_time: requestedFinal, manager_notes: notes, agent_id: agentId,
+  } = checked.value;
+
+  if (agentId && !(await isCurrentAgent(agentId))) return sendError(res, 400, 'bad_request', AGENT_NOT_FOUND);
 
   const order = await readOrder(orderId);
   if (!order) return sendError(res, 404, 'not_found', 'Order not found.');
+
+  // M9 (plan D5): change the agent of an approved order (null = open to all agents).
+  // One conditional update, no email.
+  if (action === 'assign_agent') {
+    if (order.status !== 'approved') return sendError(res, 409, 'conflict', NOT_APPROVED);
+    const { data: assigned, error: assignError } = await getSupabase()
+      .from('orders')
+      .update({ assigned_agent_id: agentId })
+      .eq('id', orderId)
+      .eq('status', 'approved')
+      .select('id');
+    if (assignError) throw assignError;
+    if (!assigned || assigned.length === 0) return sendError(res, 409, 'conflict', NOT_APPROVED);
+    return sendOk(res, { order: await managerView(await readOrder(orderId)) });
+  }
 
   // Manager notes (FR-29, plan D12): one plain update in any status, no email.
   // The note is shown to the field agent and never sent to the customer.
@@ -166,11 +196,17 @@ export default withHandler(['POST'], async (req, res) => {
   }
 
   // Field agent: approved -> completed (FR-41, decision 8). No email.
+  // M9 (plan D7, D8): another agent's order answers 404, as if it did not exist for him;
+  // an unassigned order is recorded as his.
   if (action === 'complete') {
+    const me = staff.user.id;
+    if (order.assigned_agent_id && order.assigned_agent_id !== me) {
+      return sendError(res, 404, 'not_found', 'Order not found.');
+    }
     if (order.status !== 'approved') return sendError(res, 409, 'conflict', NOT_COMPLETABLE);
-    const updated = await runUpdate('complete_order', { p_order_id: orderId });
+    const updated = await runUpdate('complete_order', { p_order_id: orderId, p_agent_id: me });
     if (!updated) return sendError(res, 409, 'conflict', NOT_COMPLETABLE);
-    return sendOk(res, { order: toAgentView(updated) });
+    return sendOk(res, { order: toAgentView(updated, me) });
   }
 
   if (action === 'confirm_flight_missing') return confirmFlightMissing(res, order);
@@ -203,6 +239,8 @@ export default withHandler(['POST'], async (req, res) => {
       // An empty box sends null, and decide_order keeps any earlier note.
       p_final_time: finalTime.toISOString(), p_notes: notes,
       p_departure: departure.toISOString(), p_recommended: recommended.toISOString(),
+      // M9 (plan D4): saved in the same update as the approval (null = all agents).
+      p_agent_id: agentId,
     });
   }
 
