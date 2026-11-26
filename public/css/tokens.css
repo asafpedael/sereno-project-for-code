@@ -1,19 +1,21 @@
 /* Sereno design tokens (DESIGN.md, Part 2: Style Guide). */
 
+/* Fonts chosen by Asaf in Milestone 12 (26.11.2026): Gilda Display for headings, Montserrat for text.
+   Self-hosted latin subsets (ADR-8); see public/assets/fonts/README.md. */
 @font-face {
-  font-family: 'Frank Ruhl Libre';
+  font-family: 'Gilda Display';
   font-style: normal;
-  font-weight: 300 900;
+  font-weight: 400; /* the family has a single weight */
   font-display: block; /* self-hosted and preloaded: wait briefly instead of swapping fonts (no jump) */
-  src: url('/assets/fonts/frank-ruhl-libre-latin.woff2') format('woff2');
+  src: url('/assets/fonts/gilda-display-latin.woff2') format('woff2');
 }
 
 @font-face {
-  font-family: 'Assistant';
+  font-family: 'Montserrat';
   font-style: normal;
-  font-weight: 200 800;
+  font-weight: 400 700;
   font-display: block; /* self-hosted and preloaded: wait briefly instead of swapping fonts (no jump) */
-  src: url('/assets/fonts/assistant-latin.woff2') format('woff2');
+  src: url('/assets/fonts/montserrat-latin.woff2') format('woff2');
 }
 
 :root {
@@ -35,8 +37,8 @@
   --color-error-tint: #F3E1DC;
 
   /* Fonts */
-  --font-heading: 'Frank Ruhl Libre', Georgia, 'Times New Roman', serif;
-  --font-body: 'Assistant', 'Segoe UI', Arial, sans-serif;
+  --font-heading: 'Gilda Display', Didot, Georgia, 'Times New Roman', serif;
+  --font-body: 'Montserrat', 'Segoe UI', Arial, sans-serif;
 
   /* Font sizes (phone first; larger screens override below) */
   --fs-h1: 40px;

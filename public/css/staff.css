@@ -11,6 +11,12 @@
   .staff-header .site-header__inner { gap: var(--space-1); }
   .staff-header__left { gap: var(--space-2); }
   .staff-header__right { gap: var(--space-1); }
+  /* Milestone 12: Montserrat is wider, so on phones the header keeps one line by tightening
+     the tabs and dropping the role label (Asaf, 27.11.2026). */
+  .staff-header .tabs { gap: var(--space-1); }
+  .staff-header .tab { font-size: 13.5px; padding: 0 4px; }
+  .staff-header .btn { padding: 0 12px; }
+  .staff-role { display: none; }
 }
 
 .tabs { display: flex; gap: var(--space-3); }
@@ -53,7 +59,7 @@
   .approvals__tools { width: 100%; justify-content: flex-start; }
   .approvals__filter { flex: 1; width: auto; }
 }
-.approvals__body { flex: 1; display: grid; grid-template-columns: 1fr; }
+.approvals__body { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr); } /* M12: never wider than the phone screen */
 .approvals__list { border-bottom: var(--rule-width) solid var(--color-rule-light); }
 .approvals__message { margin: var(--space-2) var(--gutter); }
 .approvals__details { padding: var(--space-3) var(--gutter) var(--space-4); }
@@ -173,7 +179,7 @@
 .agent-card__time {
   display: block;
   font-family: var(--font-heading);
-  font-weight: 500;
+  font-weight: 400;
   font-size: var(--fs-time);
   line-height: 1.05;
   color: var(--color-navy);
@@ -320,7 +326,7 @@
 }
 
 /* Table: header with a 2px line under it, thin rules between rows (Style Guide) */
-.archive__table-wrap { overflow-x: auto; }
+.archive__table-wrap { overflow-x: auto; position: relative; } /* keeps the hidden "Actions" label inside the scroll area (no page-wide sideways scroll on phones) */
 .archive-table { width: 100%; min-width: 760px; border-collapse: collapse; font-size: var(--fs-small); }
 .archive-table:focus { outline: none; }
 .archive-table th {

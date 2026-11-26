@@ -85,7 +85,7 @@
   .split__heading {
     margin-top: var(--space-2);
     font-family: var(--font-heading);
-    font-weight: 500;
+    font-weight: 400;
     font-size: clamp(36px, 3.4vw, 52px);
     line-height: 1.1;
   }
@@ -144,7 +144,7 @@
   }
   .split__aside--banner .split__aside-inner { position: relative; align-self: flex-end; padding: var(--space-3) var(--gutter); }
   .split__aside--banner .split__eyebrow { color: var(--color-gold); letter-spacing: 0.18em; }
-  .split__aside--banner .split__heading { margin-top: 6px; font-family: var(--font-heading); font-weight: 500; font-size: 30px; line-height: 1.1; }
+  .split__aside--banner .split__heading { margin-top: 6px; font-family: var(--font-heading); font-weight: 400; font-size: 30px; line-height: 1.1; }
   .split__aside--banner .split__heading em { font-style: italic; color: var(--color-gold); }
   .split__aside--banner .split__points { display: none; }
 }

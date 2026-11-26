@@ -881,6 +881,7 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** The style guide uses Frank Ruhl Libre and Assistant. Loading them from Google Fonts would make every visitor's browser contact Google.
 **Decision:** The latin subset of each font (one variable woff2 file per family, SIL Open Font License) is stored in `public/assets/fonts/` and declared with `@font-face` in `public/css/tokens.css`, with serif / sans-serif fallbacks. Source and license are noted in `public/assets/fonts/README.md`.
 **Consequences:** No third-party request for fonts; about 66 KB served from the site. Hebrew letters are not included (the interface is English); add the Hebrew subset if Hebrew text is ever shown.
+**Updated by ADR-43 (Milestone 12):** the fonts are now Gilda Display and Montserrat, under the same rules.
 
 ### ADR-9: Shared browser helpers for time and validation
 **Context:** Every screen shows dates and times in Israel time, and the order form must show the same validation messages the server enforces.
@@ -921,6 +922,7 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** DESIGN ("מיילים") asks for one designed template for the customer emails and the manager alert, readable in Gmail on desktop and phone, with a plain-text version. The emails are sent by n8n (ARCHITECTURE §5.3), and the live workflow is changed only by Asaf (ADR-5).
 **Decision:** The site sends data only (`approvedEmailPayload`, `rejectedEmailPayload` in `lib/notify.js`; never manager notes, customer notes or the phone). In n8n each "Set <type>" node sets the content fields (subject, preheader, heading, intro, highlighted meeting time, detail rows, AI paragraph, closing), and one Code node, "Render email", turns them into a single HTML layout (tables, inline styles, max 600 px, Georgia/Arial, no images, no buttons, every value HTML-escaped) plus a plain-text version. Send Email sends both. The repo export `n8n/sereno-notifications.json` holds placeholders only.
 **Consequences:** A change to the look is one Code node; M5's emails reuse it by adding a Set node with the same fields (types without them fall back to their plain text inside the same layout). Asaf re-imports the export, or edits the node, when the template changes.
+**Updated by ADR-43:** the email fonts are Gilda Display / Montserrat where the email app loads web fonts, with Georgia / Arial as fallback.
 
 ### ADR-17: `email_sent` means n8n accepted the event
 **Context:** After a decision the manager must know whether the customer's email went out (FR-31, decision 10: no retry queue). The n8n webhook answers immediately, before the email is sent.
@@ -1051,3 +1053,8 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Services are written on the form's review, the manager and archive panels, the agent card and three emails. They must agree.
 **Decision:** `public/js/services-text.js` (`servicesLabels`) is used by the browser and the server functions, like `meeting-time.js` (ADR-4): one wheelchair or none recorded → "Wheelchair", 2 or more → "Wheelchair × N". The emails get the finished labels, so n8n needed no change for the quantity.
 **Consequences:** The AI recommendation panel keeps naming services without a quantity (the AI recommends services, not quantities).
+
+### ADR-43: Gilda Display and Montserrat, self-hosted, also offered to the emails
+**Context:** In Milestone 12 Asaf asked for less plain text that looks like a website. After a comparison page and a survey of luxury travel sites he chose Gilda Display (headings) and Montserrat (text), "in the style of Belmond". ADR-8 requires self-hosted fonts; ADR-16's emails used Georgia / Arial only.
+**Decision:** The latin subsets (`gilda-display-latin.woff2`, static 400, 20,204 bytes; `montserrat-latin.woff2`, variable 400–700, 37,956 bytes) replace the two old files in `public/assets/fonts/`, under the same `--font-heading` / `--font-body` tokens and preloads. Gilda Display has one weight, so headings, the brand and the meeting time are set to 400 and `body` has `font-synthesis-weight: none` (no fake bold); buttons are Montserrat 600. Montserrat is wider than Assistant: on phones the staff header tightens its tabs and hides the role label, and the manager's approvals grid is `minmax(0, 1fr)`. `vercel.json` sends `Access-Control-Allow-Origin: *` for `/assets/fonts/*` only, and the n8n "Render email" node declares both fonts with `@font-face` from the live site, keeping Georgia / Arial as fallbacks.
+**Consequences:** Fonts per page fall from 66,428 to 58,160 bytes. Apple Mail and similar apps show the new fonts; Gmail keeps Georgia / Arial. The email fonts depend on the live site's address (`FONT_BASE` in the node). The Style Guide image still shows the old fonts; DESIGN's text is the source.

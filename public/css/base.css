@@ -24,10 +24,12 @@ body {
   font-family: var(--font-body);
   font-size: var(--fs-body);
   line-height: 1.65;
+  /* Gilda Display has one weight: never let the browser fake a bold version of it (M12). */
+  font-synthesis-weight: none;
 }
 
 /* ---------- Typography ---------- */
-.h1, .h2, .h3 { font-family: var(--font-heading); font-weight: 500; line-height: 1.1; color: var(--color-navy); }
+.h1, .h2, .h3 { font-family: var(--font-heading); font-weight: 400; line-height: 1.1; color: var(--color-navy); }
 .h1 { font-size: var(--fs-h1); line-height: 1.04; }
 .h2 { font-size: var(--fs-h2); }
 .h3 { font-size: var(--fs-h3); }
@@ -74,7 +76,7 @@ a:hover { color: var(--color-deep-navy); }
 }
 .brand {
   font-family: var(--font-heading);
-  font-weight: 700;
+  font-weight: 400; /* Gilda Display has one weight; 700 would be faked by the browser (M12, D4) */
   font-size: var(--fs-brand);
   line-height: 1;
   color: var(--color-cream);
@@ -104,7 +106,7 @@ a:hover { color: var(--color-deep-navy); }
   border-radius: var(--radius-button);
   font-family: var(--font-body);
   font-size: var(--fs-button);
-  font-weight: 700;
+  font-weight: 600; /* Montserrat 700 reads too heavy on buttons (M12, D6) */
   line-height: 1.2;
   text-decoration: none;
   cursor: pointer;
@@ -293,7 +295,7 @@ a:hover { color: var(--color-deep-navy); }
 .panel-dark__label { font-size: var(--fs-small); font-weight: 600; }
 .panel-dark__time {
   font-family: var(--font-heading);
-  font-weight: 500;
+  font-weight: 400;
   font-size: var(--fs-time);
   line-height: 1.1;
   color: var(--color-gold);
@@ -310,7 +312,7 @@ a:hover { color: var(--color-deep-navy); }
 .data-row__value { font-weight: 700; font-size: var(--fs-small); }
 
 /* Review in step 4 (M6): heading in the heading font, rows with an "Edit" link */
-.review__heading { font-family: var(--font-heading); font-weight: 500; font-size: 24px; color: var(--color-navy); }
+.review__heading { font-family: var(--font-heading); font-weight: 400; font-size: 24px; color: var(--color-navy); }
 .review__panel { padding-top: 4px; padding-bottom: 4px; }
 .review .link-button { flex: none; min-height: 46px; padding: 0 4px; }
 
