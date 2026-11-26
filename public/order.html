@@ -29,12 +29,6 @@
       <div class="split__aside-inner">
         <p class="label-caps split__eyebrow">VIP departure escort</p>
         <h2 class="split__heading">Book your escort in <em>four short steps.</em></h2>
-        <ul class="split__points">
-          <li>Departures only.</li>
-          <li>Every booking is subject to manager approval.</li>
-          <li>Suggestions shown are recommendations only.</li>
-          <li>We email you the decision.</li>
-        </ul>
       </div>
     </aside>
 
@@ -194,6 +188,22 @@
               </div>
             </div>
           </section>
+
+          <!-- Booking rules and consent (Milestone 10): shown on every screen size, right before
+               sending; the server refuses an order without the tick (approval_ack). -->
+          <div class="consent stack">
+            <ul class="booking-rules panel" id="booking-rules" aria-label="Booking rules">
+              <li>Departures only.</li>
+              <li>Every booking is subject to manager approval.</li>
+              <li>Suggestions shown are recommendations only.</li>
+              <li>We email you the decision.</li>
+            </ul>
+            <div class="field" id="field-ack">
+              <label class="check"><input class="check__input" type="checkbox" id="approval-ack"
+                     aria-describedby="booking-rules ack-error"> I understand my booking is subject to manager approval.</label>
+              <p class="field__error" id="ack-error" hidden></p>
+            </div>
+          </div>
 
           <!-- Anti-bot field: hidden from people, left empty by real browsers -->
           <div class="visually-hidden" aria-hidden="true">

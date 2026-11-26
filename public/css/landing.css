@@ -153,9 +153,34 @@
 
 .landing__note { font-size: var(--fs-small); color: var(--color-ink-soft); }
 
+/* "About Sereno" (Milestone 10): text, the "What's included" list and the video.
+   Phone: one column, the video under the text. Desktop: text beside the video. */
+.about { display: grid; gap: var(--space-3); }
+.about__text { display: grid; gap: var(--space-2); max-width: 62ch; }
+.about__subheading { margin-top: var(--space-1); font-family: var(--font-heading); font-weight: 500; font-size: 22px; line-height: 1.2; }
+.about__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.about__list li { display: flex; gap: 12px; align-items: baseline; }
+.about__list li::before { content: ''; flex: none; width: 18px; height: 1px; background: var(--color-gold-dark); transform: translateY(-4px); }
+/* The poster is the shared sunset scene (ADR-25); nothing of the video loads before play. */
+.about__video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2; /* the video is 1280 x 853 */
+  background: var(--color-deep-navy);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: 2px;
+  object-fit: contain;
+}
+
 @media (min-width: 900px) {
   .landing { display: grid; grid-template-columns: 1fr 1fr; column-gap: var(--space-6); row-gap: var(--space-5); }
+  /* The page reads How it works -> About -> Escort options on phones; on desktop the two short
+     parts keep their two columns (DESIGN) and "About Sereno" takes the full row under them. */
+  .landing__how { grid-column: 1; grid-row: 1; }
+  .landing__options { grid-column: 2; grid-row: 1; }
+  .landing__about { grid-column: 1 / -1; grid-row: 2; }
   .landing__note { grid-column: 1 / -1; }
+  .about { grid-template-columns: 1fr 1fr; column-gap: var(--space-6); align-items: start; }
   .steps__number { font-size: 36px; }
 }
 

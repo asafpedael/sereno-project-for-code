@@ -58,15 +58,17 @@
 > **עודכן 22.11.2026 (החלטה של אסף, Milestone 6):** אזור הפתיחה נבנה לפי עיצוב חדש שאסף בחר, ולא לפי התמונות. הכותרת העליונה ואזור הפתיחה שלהלן מחליפים את מה שבתמונות. שאר המסך לא השתנה.
 
 - אזור פתיחה כהה ברוחב מלא, בגובה המסך: ברקע סצנה מצוירת (SVG) של חלונות טרמינל בשקיעה, עם שמש, קו אופק, אורות מסלול ומטוס, ושכבת Deep Navy מתחת לטקסט.
-- כותרת עליונה על גבי אזור הפתיחה: השם Sereno ומתחתיו "quality. speed. comfort.", קישורים "How it works" ו-"Escort options" (קופצים לחלקים בדף, בדסקטופ בלבד), וכפתור זהב "Start Your Registration".
-- טקסט הפתיחה: "VIP DEPARTURE ESCORT" (זהב, אותיות גדולות), הכותרת "Your journey deserves a better beginning." (המילים "better beginning." באיטליק זהב), הפסקה "Enjoy a more seamless airport departure with Sereno. From your meeting time to your personal escort, the details are carefully coordinated around your flight.", כפתור זהב "Start Your Registration" עם חץ, וקישור "See how it works".
+- כותרת עליונה על גבי אזור הפתיחה: השם Sereno ומתחתיו "quality. speed. comfort.", קישורים "How it works", "About" ו-"Escort options" (קופצים לחלקים בדף, בדסקטופ בלבד), וכפתור זהב "Book your escort".
+- טקסט הפתיחה: "VIP DEPARTURE ESCORT" (זהב, אותיות גדולות), הכותרת "Your journey deserves a better beginning." (המילים "better beginning." באיטליק זהב), הפסקה "Enjoy a more seamless airport departure with Sereno. From your meeting time to your personal escort, the details are carefully coordinated around your flight.", כפתור זהב "Book your escort" עם חץ, וקישור "See how it works".
 - בפינה התחתונה: קו זהב קצר, "QUALITY. SPEED. COMFORT." ו-"DEPARTURES ONLY".
 - "How it works": שלושה צעדים ממוספרים: Choose your flight, Tell us who is travelling, Receive your meeting time by email.
+- "About Sereno" (Milestone 10): כמה פסקאות קצרות על השירות ועל מה שחשוב לנו, ורשימה "What's included", בטקסט שאסף אישר.
+- סרטון (Milestone 10): נגן עם כפתורי שליטה ותמונת פתיחה (סצנת השקיעה), שנטען רק כשלוחצים Play. בדסקטופ ליד הטקסט, בטלפון מתחתיו.
 - "Escort options": שתי אפשרויות, Full (To the gate) ו-Partial (Through security).
 - תיבת הערה: "Every booking is subject to manager approval. Suggestions shown are recommendations only."
 - כותרת תחתונה עם השם Sereno. אין מחירים.
 
-**מה קורה במסך:** לחיצה על "Start Your Registration", בכותרת או באזור הפתיחה, מעבירה ל**הזמנה / רישום לקוח**, שלב 1. "See how it works" יורד לחלק "How it works".
+**מה קורה במסך:** לחיצה על "Book your escort", בכותרת או באזור הפתיחה, מעבירה ל**הזמנה / רישום לקוח**, שלב 1. "See how it works" יורד לחלק "How it works". "About" יורד לחלק "About Sereno".
 
 ---
 
@@ -97,8 +99,8 @@
 
 ### שלב 4: Details (Order · Details and review)
 - **מטרה:** פרטי קשר וסקירה אחרונה לפני שליחה.
-- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ולכל שורה קישור "Edit". כפתורים "Back" ו-"Submit request".
-- **מה קורה:** "Edit" מאפשר לתקן כל חלק לפני השליחה. "Submit request" שולח את ההזמנה למנהל ועובר ל"Request received". אם השרת מחזיר "Too many requests, please try again later", ההודעה מוצגת מעל הכפתורים בתיבת שגיאה (Error Tint), והנתונים נשמרים.
+- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ולכל שורה קישור "Edit". אחרי הסקירה, פאנל קצר עם ארבעת כללי ההזמנה: "Departures only.", "Every booking is subject to manager approval.", "Suggestions shown are recommendations only.", "We email you the decision.", וממש מתחתיו תיבת סימון "I understand my booking is subject to manager approval." (לא מסומנת בהתחלה, Milestone 10). כפתורים "Back" ו-"Submit request".
+- **מה קורה:** "Edit" מאפשר לתקן כל חלק לפני השליחה. "Submit request" שולח את ההזמנה למנהל ועובר ל"Request received". בלי הסימון הוא מציג מתחת לתיבה "Please confirm to send your request." ולא שולח. אם השרת מחזיר "Too many requests, please try again later", ההודעה מוצגת מעל הכפתורים בתיבת שגיאה (Error Tint), והנתונים נשמרים.
 
 ### Request received
 - **מטרה:** לאשר שהבקשה התקבלה. ההזמנה עדיין לא מאושרת, וזה כתוב במפורש.
@@ -197,6 +199,7 @@
 - **מיילים (הוחלט 18.11.2026, החל מ-Milestone 4):** המיילים מעוצבים לפי ה-Style Guide, ככל שתוכנות מייל מאפשרות: רצועה עליונה ב-Deep Navy עם השם Sereno בגופן הכותרות, גוף על רקע Cream או Paper, קו זהב קצר מעל הכותרת, פרטי ההזמנה כשורות של תווית וערך, ושעת המפגש מודגשת. רוחב עד 600px, עמודה אחת, בלי תמונות ובלי כפתורים. אם הגופנים לא נטענים, משתמשים בגופני גיבוי (serif לכותרות, sans-serif לטקסט). לכל מייל גם גרסת טקסט פשוט.
 - **הודעת אזהרה על מייל שלא נשלח:** תיבה ב-Error Tint מעל הכפתורים בפרטי ההזמנה: "Decision saved, but the email to the customer was not sent."
 - **גרסת דסקטופ של מסכי הלקוח:** אותו תוכן בעמודה אחת ממורכזת ברוחב של עד 560px. דף הנחיתה: אזור הפתיחה ברוחב מלא (עודכן 22.11.2026), ומתחתיו "How it works" ו-"Escort options" בשתי עמודות. **גרסת טלפון של מסך המנהל:** הרשימה והפרטים זה מתחת לזה.
+- **דף הנחיתה והטופס (Milestone 10, החלטה של אסף, 26.11.2026):** החלקים "About Sereno" והסרטון, פאנל הכללים ותיבת הסימון בשלב 4 נבנים לפי ה-Style Guide באותו קו עיצובי (פאנל עם נקודות בקו זהב, תיבת סימון זהב במראה הכהה, נגן וידאו בפינות של 2px).
 - **סטטיסטיקות ותגית "Returning" בארכיון (Milestone 8, החלטה של אסף, 23.11.2026):** ארבעת הכרטיסים שבמסכים נבנים ומתעדכנים לפי החיפוש והסינון (ראו מסך 5). התגית "Returning" מופיעה בטבלת הארכיון למנהל בלבד, לפי אותו כלל כמו במסך המנהל (FR-20).
 
 ## עיצוב "אתרי" לטופס ולמסכי הצוות (עודכן 22.11.2026, החלטה של אסף, Milestone 6)
@@ -204,7 +207,7 @@
 הטופס, דף הכניסה, מסך המנהל ומסך הנציג נבנו מחדש במראה כהה, בהמשך לדף הנחיתה החדש. המבנה והתוכן של כל מסך (השדות, הכפתורים, הטקסטים והסדר) לא השתנו. מה שהשתנה הוא המראה, והוא גובר על הצבעים שבתמונות ועל הכללים שבחלק 2 בכל מקום שהם סותרים:
 
 - **רקע כהה:** הדפים ברקע Deep Navy, והטפסים והכרטיסים בכחול כהה (בערך `#131C28` לרקע ו-`#1A2636` לשדות ולכרטיסים). הטקסט בקרם, והטקסט המשני ב-On-Dark Soft.
-- **פאנל השקיעה:** בדסקטופ, בטופס ההזמנה ובדף הכניסה, בצד שמאל פאנל קבוע עם סצנת השקיעה של דף הנחיתה (קובץ אחד, `public/assets/scene.svg`) וטקסט קצר: בטופס "Book your escort in four short steps." וארבע נקודות (יציאות בלבד, אישור מנהל, הצעות בלבד, ההחלטה במייל); בדף הכניסה "Welcome back to Sereno.". בטלפון הפאנל לא מוצג בטופס, ובדף הכניסה הוא פס קצר מעל הטופס.
+- **פאנל השקיעה:** בדסקטופ, בטופס ההזמנה ובדף הכניסה, בצד שמאל פאנל קבוע עם סצנת השקיעה של דף הנחיתה (קובץ אחד, `public/assets/scene.svg`) וטקסט קצר: בטופס "Book your escort in four short steps." (ארבע הנקודות עברו לשלב האחרון של הטופס, מעל תיבת הסימון, Milestone 10); בדף הכניסה "Welcome back to Sereno.". בטלפון הפאנל לא מוצג בטופס, ובדף הכניסה הוא פס קצר מעל הטופס.
 - **כרטיס:** בדסקטופ הטופס, כרטיס הכניסה ופרטי ההזמנה במסך המנהל יושבים בכרטיס עם קו זהב עליון.
 - **כפתורים ושדות מעוגלים:** כפתורים, שדות, תיבות סימון, כרטיסי בחירה, רשימת הטיסות ובוחרי המספרים עם פינות של 8px. תגיות, פאנלים וכרטיסים נשארים עם פינות של 2px.
 - **קווים רכים:** מסגרות השדות על הרקע הכהה שקופות למחצה. הן מתבהרות במעבר עכבר, ובשדה פעיל או בבחירה מסומנת הן בזהב. תיבת סימון מסומנת וכפתור רדיו נבחר בזהב.

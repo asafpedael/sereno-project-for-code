@@ -519,11 +519,12 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
 { "flight_id": "uuid", "flight_no": "DM101", "flight_date": null, "travelers": 2, "bags": 3,
   "services": ["porter"], "escort_scope": "full",
   "full_name": "Daniel A.", "phone": "050-1110001", "email": "name@example.com", "notes": "",
-  "website": "" }
+  "approval_ack": true, "website": "" }
 ```
+`approval_ack` חייב להיות `true` (Milestone 10, FR-44). הוא לא נשמר.
 טיסה מהרשימה: `flight_id` ו-`flight_no`. טיסה שהלקוח הקליד: `flight_id = null`, `flight_no` ו-`flight_date` (`YYYY-MM-DD`, היום או מאוחר יותר). `website` הוא השדה הנסתר נגד בוטים, והדף שולח אותו תמיד ריק.
 
-ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`. שגיאה: `400 bad_request`.
+ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`, ו-`approval_ack = true`. שגיאה: `400 bad_request`.
 
 סדר פעולות:
 1. אם `website` אינו ריק: תשובת הצלחה רגילה עם אסמכתא אקראית, בלי לשמור ובלי מייל (החלטה 12).
@@ -799,7 +800,7 @@ sereno/                          ריפו ציבורי, ענף main
 
 | דרישות | מימוש |
 |---|---|
-| FR-01 עד FR-10 (טופס, דף נחיתה) | `index.html`, `order.html`, `order-form.js`, `api/flights.js`, `api/submit-order.js`, `meeting-time.js` |
+| FR-01 עד FR-10, FR-44 (טופס, דף נחיתה) | `index.html`, `order.html`, `order-form.js`, `api/flights.js`, `api/submit-order.js`, `meeting-time.js` |
 | FR-11, FR-32 (בדיקת טיסה, חריג) | `api/submit-order.js` שלב 2, סטטוס `needs_clarification`, `manager_alert` |
 | FR-12 (שעת מפגש) | `public/js/meeting-time.js` |
 | FR-13 (סטטוסים) | `data/lists.json`, אילוץ `check` ב-`orders.status` |
@@ -1019,3 +1020,13 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** After M9 Asaf asked that the customer get an email as soon as the request is sent, not only after the decision (24.11.2026). PRD FR-43 added with his approval.
 **Decision:** `api/submit-order.js` sends a new event `customer_received` (`receivedEmailPayload` in `lib/notify.js`: `to`, `customer_name`, `reference`, `flight_no`, `destination`, `departure_local`) together with `manager_alert`, both after the order is saved and at the same time. No meeting time, AI paragraph or notes; a typed flight that was not found shows the typed number and date. In n8n: a sixth Switch output and a "Set customer_received" node into the same "Render email" and allowlist (repo export updated, placeholders only). The honeypot path sends nothing.
 **Consequences:** Two n8n events per order. Until the live workflow has the new output, the event is accepted and ignored. When the site opens beyond the allowlist, anyone could make the site email any address (at most 3 per address per hour, FR-40).
+
+### ADR-38: The landing video is a self-hosted file that loads only on play
+**Context:** Milestone 10 adds Asaf's video to the landing page; the DoD asks that the page load as fast as before. The video was about 42 MB on his computer.
+**Decision:** The video is one compressed mp4 file (H.264 + AAC, 1280 × 853, 37 seconds, 2.9 MB after Asaf compressed it with HandBrake) at `public/assets/sereno-video.mp4`, shown in a plain `<video controls playsinline preload="none">` inside the new "About Sereno" part. The poster is the existing `public/assets/scene.svg` (ADR-25), so the first load adds no new file and nothing of the video is downloaded before the visitor presses play. No autoplay. Its subtitles are part of the picture, so there is no captions file. No third-party player (no YouTube requests).
+**Consequences:** The file lives in the repo and is served by Vercel's CDN; a replacement video must stay small (GitHub warns from 50 MB). If the file is missing the player shows the poster and does not play.
+
+### ADR-39: The booking consent is checked on the server and not stored
+**Context:** Milestone 10 (FR-44): before sending, the customer ticks "I understand my booking is subject to manager approval.", and an order without it must be refused on the server too. The live site and the local run share one database.
+**Decision:** The page sends `approval_ack` with the order; `validateOrderBody` in `lib/validate.js` accepts only the JSON value `true` and otherwise answers `400` "Please confirm that your booking is subject to manager approval.". The check is the last validation step, so other field errors keep their order; the honeypot answers before it. The value is not stored: every saved order passed it. The four booking rules sit right above the checkbox in step 4 on every screen size, and the form's desktop side panel no longer lists them (Asaf, 26.11.2026); the `.split__points` style stays for the staff sign-in panel.
+**Consequences:** No migration. A browser that still has the old form open when the change goes live gets the `400` message and must reload. Old orders are unaffected.

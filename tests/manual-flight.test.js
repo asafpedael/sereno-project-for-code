@@ -13,6 +13,7 @@ function body(overrides = {}) {
     flight_id: null, flight_no: 'ly 315', flight_date: '2026-12-12',
     travelers: 2, bags: 1, services: [], escort_scope: 'full',
     full_name: 'Dana Test', phone: '050-1234567', email: 'dana@example.com', notes: '',
+    approval_ack: true,
     ...overrides,
   };
 }

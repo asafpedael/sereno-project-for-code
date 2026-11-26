@@ -24,9 +24,10 @@
       </a>
       <nav class="hero__nav" aria-label="Page sections">
         <a href="#how-heading">How it works</a>
+        <a href="#about-heading">About</a>
         <a href="#options-heading">Escort options</a>
       </nav>
-      <a class="btn btn-primary hero__bar-cta" href="/order.html">Start Your Registration</a>
+      <a class="btn btn-primary hero__bar-cta" href="/order.html">Book your escort</a>
     </header>
 
     <div class="hero__content">
@@ -35,7 +36,7 @@
       <p class="hero__lead">Enjoy a more seamless airport departure with Sereno. From your meeting time to your personal escort, the details are carefully coordinated around your flight.</p>
       <div class="hero__actions">
         <a class="btn btn-primary" href="/order.html">
-          Start Your Registration
+          Book your escort
           <svg class="btn__arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
         </a>
         <a class="hero__link" href="#how-heading">See how it works</a>
@@ -51,7 +52,7 @@
   <main>
 
     <div class="landing">
-      <section class="landing__section" aria-labelledby="how-heading">
+      <section class="landing__section landing__how" aria-labelledby="how-heading">
         <h2 class="h3" id="how-heading">How it works</h2>
         <ol class="steps">
           <li class="steps__item"><span class="steps__number">1</span><span>Choose your flight</span></li>
@@ -60,7 +61,36 @@
         </ol>
       </section>
 
-      <section class="landing__section" aria-labelledby="options-heading">
+      <!-- About Sereno (Milestone 10): text approved by Asaf, 26.11.2026. The video downloads
+           only when the visitor presses play (preload="none"), so the first load stays light. -->
+      <section class="landing__section landing__about" aria-labelledby="about-heading">
+        <h2 class="h3" id="about-heading">About Sereno</h2>
+        <div class="about">
+          <div class="about__text">
+            <p>Sereno is a VIP escort service for departing passengers. A personal escort meets you at the airport at your meeting time and stays with you on the way to your flight: through security, or all the way to the gate. The choice is yours.</p>
+            <p>You book online in four short steps, with no account needed. You choose your flight from our schedule, so your details are right from the start, and we suggest a meeting time based on your departure, the number of travellers and your bags.</p>
+            <p>Every booking is reviewed by our manager before it is confirmed. Once it is approved, we email you the decision and your meeting time, and your escort receives everything needed to look after you: your flight, your party, your bags and any extra help you asked for.</p>
+            <p>We want your holiday to begin well before take-off. Our aim is a complete VIP experience and a calm, positive start to your trip, before you even leave the country. Knowing that someone is looking after you, and that you will reach your flight as quickly and comfortably as possible, gives you peace of mind. That is what everything we do is built around.</p>
+            <h3 class="about__subheading">What&#8217;s included</h3>
+            <ul class="about__list">
+              <li>A personal escort for your departure</li>
+              <li>Full escort to the gate, or partial escort through security</li>
+              <li>Porter and luggage help, on request</li>
+              <li>A wheelchair, on request</li>
+              <li>A meeting time set around your flight, confirmed by email</li>
+            </ul>
+          </div>
+          <div class="about__media">
+            <video class="about__video" controls playsinline preload="none" poster="/assets/scene.svg"
+                   aria-label="Video about the Sereno departure escort service">
+              <source src="/assets/sereno-video.mp4" type="video/mp4">
+              <p>Your browser cannot play this video.</p>
+            </video>
+          </div>
+        </div>
+      </section>
+
+      <section class="landing__section landing__options" aria-labelledby="options-heading">
         <h2 class="h3" id="options-heading">Escort options</h2>
         <div class="options">
           <div class="option-card">

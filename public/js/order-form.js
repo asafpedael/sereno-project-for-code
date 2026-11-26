@@ -334,6 +334,11 @@ const DETAIL_FIELDS = [
 for (const [inputId, fieldId, errorId] of DETAIL_FIELDS) {
   $(inputId).addEventListener('input', () => clearFieldError(fieldId, errorId, [$(inputId)]));
 }
+// Consent (Milestone 10): ticking the box clears its error.
+const ackInput = $('approval-ack');
+ackInput.addEventListener('change', () => {
+  if (ackInput.checked) clearFieldError('field-ack', 'ack-error', [ackInput]);
+});
 
 // ---------- Validation per step (same rules as the server) ----------
 
@@ -349,7 +354,10 @@ const STEP_FIELDS = {
   ],
   2: [['field-travelers', 'travelers-error', () => [travelersInput]], ['field-bags', 'bags-error', () => [bagsInput]]],
   3: [['field-escort', 'escort-error', () => []]],
-  4: DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
+  4: [
+    ...DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
+    ['field-ack', 'ack-error', () => [ackInput]],
+  ],
 };
 
 function validateStep(step) {
@@ -402,6 +410,11 @@ function validateStep(step) {
     if (charLength($('notes').value.trim()) > 500) {
       showFieldError('field-notes', 'notes-error', [$('notes')], 'Notes must be 500 characters or fewer.');
       problems.push($('notes'));
+    }
+    // Last, so a wrong contact field still gets the focus first.
+    if (!ackInput.checked) {
+      showFieldError('field-ack', 'ack-error', [ackInput], 'Please confirm to send your request.');
+      problems.push(ackInput);
     }
   }
 
@@ -506,6 +519,7 @@ async function submitOrder() {
     phone: $('phone').value.trim(),
     email: $('email').value.trim(),
     notes: $('notes').value.trim(),
+    approval_ack: ackInput.checked, // the server refuses anything but true (FR-44)
     website: $('website').value,
   };
 
