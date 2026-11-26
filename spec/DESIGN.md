@@ -89,8 +89,8 @@
 
 ### שלב 2: Travellers (Order · Travellers)
 - **מטרה:** מספר נוסעים, מזוודות ושירותים נוספים, ושעת מפגש מומלצת.
-- **מה יש:** כותרת "Travellers and bags". שני בוחרי מספר עם כפתורי − ו-+: "Travellers (1–10)" ו-"Checked bags (0–10)". "Optional services": תיבות סימון "Porter / luggage help" ו-"Wheelchair". תיבה כהה "Suggested meeting time" עם השעה בזהב (12:45) והטקסט "Suggestion only. Subject to manager approval."
-- **מה קורה:** שעת המפגש היא הצעה בלבד, והיא מחושבת לפי מספר הנוסעים והמזוודות. כשהמפגש נופל ביום שלפני ההמראה, התיבה מציגה גם את התאריך. כשהטיסה הוזנה ידנית, התיבה מציגה במקום שעה את הטקסט "We will confirm your meeting time after checking your flight." "Back" חוזר לשלב 1 והנתונים נשמרים. "Next" עובר לשלב 3.
+- **מה יש:** כותרת "Travellers and bags". שני בוחרי מספר עם כפתורי − ו-+: "Travellers (1–10)" ו-"Checked bags (0–10)". "Optional services": תיבות סימון "Porter / luggage help" ו-"Wheelchair". כשמסמנים "Wheelchair" ויש 2 נוסעים או יותר, מתחתיה מופיע בוחר מספר "How many wheelchairs? (1–N)" (N הוא מספר הנוסעים), מתחיל ב-1 (Milestone 11). תיבה כהה "Suggested meeting time" עם השעה בזהב (12:45) והטקסט "Suggestion only. Subject to manager approval."
+- **מה קורה:** שעת המפגש היא הצעה בלבד, והיא מחושבת לפי מספר הנוסעים והמזוודות. כשהמפגש נופל ביום שלפני ההמראה, התיבה מציגה גם את התאריך. כשהטיסה הוזנה ידנית, התיבה מציגה במקום שעה את הטקסט "We will confirm your meeting time after checking your flight." הורדת מספר הנוסעים מתחת לכמות הכיסאות מורידה גם אותה. "Back" חוזר לשלב 1 והנתונים נשמרים. "Next" עובר לשלב 3.
 
 ### שלב 3: Escort (Order · Escort)
 - **מטרה:** הלקוח בוחר את היקף הליווי. הבחירה שלו בלבד, והמנהל לא יכול לשנות אותה.
@@ -99,7 +99,7 @@
 
 ### שלב 4: Details (Order · Details and review)
 - **מטרה:** פרטי קשר וסקירה אחרונה לפני שליחה.
-- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ולכל שורה קישור "Edit". אחרי הסקירה, פאנל קצר עם ארבעת כללי ההזמנה: "Departures only.", "Every booking is subject to manager approval.", "Suggestions shown are recommendations only.", "We email you the decision.", וממש מתחתיו תיבת סימון "I understand my booking is subject to manager approval." (לא מסומנת בהתחלה, Milestone 10). כפתורים "Back" ו-"Submit request".
+- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ולכל שורה קישור "Edit". בשורת Services כמה כיסאות: "Wheelchair × 2" (כיסא אחד: "Wheelchair"). אחרי הסקירה, פאנל קצר עם ארבעת כללי ההזמנה: "Departures only.", "Every booking is subject to manager approval.", "Suggestions shown are recommendations only.", "We email you the decision.", וממש מתחתיו תיבת סימון "I understand my booking is subject to manager approval." (לא מסומנת בהתחלה, Milestone 10). כפתורים "Back" ו-"Submit request".
 - **מה קורה:** "Edit" מאפשר לתקן כל חלק לפני השליחה. "Submit request" שולח את ההזמנה למנהל ועובר ל"Request received". בלי הסימון הוא מציג מתחת לתיבה "Please confirm to send your request." ולא שולח. אם השרת מחזיר "Too many requests, please try again later", ההודעה מוצגת מעל הכפתורים בתיבת שגיאה (Error Tint), והנתונים נשמרים.
 
 ### Request received
@@ -140,7 +140,7 @@
 **מה יש במסך:**
 - כותרת כהה: השם Sereno, תפריט תפקיד "Field agent" וכפתור "Log out". מתחתיה לשוניות "Orders" (פעילה) ו-"Archive".
 - כותרת "Approved orders" וכפתור "Refresh".
-- רשימת כרטיסים, כרטיס לכל הזמנה מאושרת. בכל כרטיס: "Meeting time" בגדול, ומתחתיה התאריך בקטן, "Departure", שם הלקוח, מספר טלפון (מוצג כקישור), Flight, Services, Travellers · Bags, Escort, ובתיבה נפרדת "Manager notes" כשיש הערות. הכרטיס הראשון מסומן בפס זהב.
+- רשימת כרטיסים, כרטיס לכל הזמנה מאושרת. בכל כרטיס: "Meeting time" בגדול, ומתחתיה התאריך בקטן, "Departure", שם הלקוח, מספר טלפון (מוצג כקישור), Flight, Services, Travellers · Bags, Escort, ובתיבה נפרדת "Manager notes" כשיש הערות. תיבה "Meeting point" עם נקודת המפגש הקבועה, בכל כרטיס (Milestone 11). הכרטיס הראשון מסומן בפס זהב.
 - בכרטיס של הזמנה ששובצה לנציג עצמו, תגית "Assigned to you" ליד שם הלקוח.
 - בתחתית כל כרטיס כפתור משני קטן "Mark completed" (לא מופיע בתמונות).
 - בתחתית קישור "Archive · opens on desktop".
@@ -201,6 +201,7 @@
 - **גרסת דסקטופ של מסכי הלקוח:** אותו תוכן בעמודה אחת ממורכזת ברוחב של עד 560px. דף הנחיתה: אזור הפתיחה ברוחב מלא (עודכן 22.11.2026), ומתחתיו "How it works" ו-"Escort options" בשתי עמודות. **גרסת טלפון של מסך המנהל:** הרשימה והפרטים זה מתחת לזה.
 - **דף הנחיתה והטופס (Milestone 10, החלטה של אסף, 26.11.2026):** החלקים "About Sereno" והסרטון, פאנל הכללים ותיבת הסימון בשלב 4 נבנים לפי ה-Style Guide באותו קו עיצובי (פאנל עם נקודות בקו זהב, תיבת סימון זהב במראה הכהה, נגן וידאו בפינות של 2px).
 - **סטטיסטיקות ותגית "Returning" בארכיון (Milestone 8, החלטה של אסף, 23.11.2026):** ארבעת הכרטיסים שבמסכים נבנים ומתעדכנים לפי החיפוש והסינון (ראו מסך 5). התגית "Returning" מופיעה בטבלת הארכיון למנהל בלבד, לפי אותו כלל כמו במסך המנהל (FR-20).
+- **כמות כיסאות גלגלים ונקודת מפגש (Milestone 11, החלטה של אסף, 26.11.2026):** בכל המסכים ובמיילים, 2 כיסאות ומעלה מוצגים "Wheelchair × 2", וכיסא אחד או הזמנה ישנה "Wheelchair". נקודת המפגש מופיעה כשורה ראשונה מתחת לשעת המפגש במייל האישור ובמייל שינוי הטיסה, ובכרטיס הנציג בתיבה בסגנון "Manager notes".
 
 ## עיצוב "אתרי" לטופס ולמסכי הצוות (עודכן 22.11.2026, החלטה של אסף, Milestone 6)
 

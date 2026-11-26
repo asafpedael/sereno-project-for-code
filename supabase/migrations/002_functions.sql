@@ -9,6 +9,8 @@ drop function if exists public.insert_order_with_limits(
   uuid, uuid, text, text, text, integer, integer, jsonb, text, text, timestamptz, integer, integer
 );
 
+-- Milestone 11: 004_wheelchairs.sql replaces this insert function (one more parameter).
+-- After 004 has run, do not re-run this file on the same database; run 004 again instead.
 -- Inserts a public order only if the hourly limits are not reached (FR-40, decision 12).
 -- A transaction-level lock makes parallel submissions wait for each other, so the count
 -- and the insert act as one step and the limits cannot be bypassed by sending at once.

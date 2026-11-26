@@ -13,5 +13,6 @@
   "escort_scopes": [
     { "code": "full", "label": "Full (to the gate)" },
     { "code": "partial", "label": "Partial (to security)" }
-  ]
+  ],
+  "meeting_point": "Departures hall, Terminal 3, before security."
 }

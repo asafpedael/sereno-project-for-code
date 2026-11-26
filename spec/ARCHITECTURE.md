@@ -170,6 +170,7 @@ customers 1 ───< N orders N >─── 1 flights
 | `travelers` | integer, not null, בין 1 ל-10 | |
 | `bags` | integer, not null, בין 0 ל-10 | |
 | `services` | jsonb, not null, ברירת מחדל `[]` | מערך קודים מתוך `porter`, `wheelchair` |
+| `wheelchairs` | integer, **יכול להיות ריק**, בין 1 ל-10 ולא יותר מ-`travelers` | כמות כיסאות הגלגלים כש-`wheelchair` נמצא ב-`services`. ריק אחרת, ובהזמנות שלפני Milestone 11 (מוצג כ-"Wheelchair") |
 | `escort_scope` | text, not null | `full` או `partial`. בחירת הלקוח בלבד, אין עדכון שלה |
 | `customer_notes` | text | עד 500 תווים |
 | `status` | text, not null, ברירת מחדל `pending` | `pending`, `approved`, `rejected`, `needs_clarification`, `completed` |
@@ -327,6 +328,8 @@ $$;
 
 Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decide_order` את `p_agent_id` (ברירת מחדל ריקה, נשמר רק באישור), ול-`complete_order` את `p_agent_id` (משלים רק הזמנה לא משובצת או של אותו נציג, ורושם אותו כשהייתה לא משובצת).
 
+Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמודה `wheelchairs`, ול-`insert_order_with_limits` את `p_wheelchairs` (ברירת מחדל ריקה, כך שגרסה קודמת של האתר ממשיכה לעבוד).
+
 ### נתוני דמה
 
 הקובץ `supabase/seed/seed.sql`, מבוסס על `sereno-demo-data.xlsx` (8 לקוחות, 10 טיסות, 15 הזמנות). לאקסל יש גיליון לכל טבלה (`customers`, `flights`, `orders`) עם שמות עמודות זהים למסד, וגיליון `test_cases` שמסביר מה כל הזמנה בודקת ולא נטען למסד. כללי הייבוא:
@@ -419,6 +422,7 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
   "travelers": 2,
   "bags": 3,
   "selected_services": ["porter"],
+  "wheelchairs": null,
   "escort_scope": "full",
   "customer_notes": "<עד 500 תווים, מסומן כנתון לא מהימן>",
   "is_returning_customer": true,
@@ -504,7 +508,8 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
   "supabase_url": "...", "supabase_publishable_key": "...",
   "lists": { "statuses": [{"code":"pending","label":"Pending approval"}],
              "services": [{"code":"porter","label":"Porter / luggage help"}, {"code":"wheelchair","label":"Wheelchair"}],
-             "escort_scopes": [{"code":"full","label":"Full (to the gate)"}, {"code":"partial","label":"Partial (to security)"}] } } }
+             "escort_scopes": [{"code":"full","label":"Full (to the gate)"}, {"code":"partial","label":"Partial (to security)"}],
+             "meeting_point": "Departures hall, Terminal 3, before security." } } }
 ```
 
 #### `GET /api/flights?q=<text>`
@@ -517,14 +522,14 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
 גוף הבקשה:
 ```json
 { "flight_id": "uuid", "flight_no": "DM101", "flight_date": null, "travelers": 2, "bags": 3,
-  "services": ["porter"], "escort_scope": "full",
+  "services": ["porter"], "wheelchairs": null, "escort_scope": "full",
   "full_name": "Daniel A.", "phone": "050-1110001", "email": "name@example.com", "notes": "",
   "approval_ack": true, "website": "" }
 ```
 `approval_ack` חייב להיות `true` (Milestone 10, FR-44). הוא לא נשמר.
 טיסה מהרשימה: `flight_id` ו-`flight_no`. טיסה שהלקוח הקליד: `flight_id = null`, `flight_no` ו-`flight_date` (`YYYY-MM-DD`, היום או מאוחר יותר). `website` הוא השדה הנסתר נגד בוטים, והדף שולח אותו תמיד ריק.
 
-ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`, ו-`approval_ack = true`. שגיאה: `400 bad_request`.
+ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `wheelchairs` מספר שלם מ-1 ועד `travelers` רק כש-`wheelchair` נבחר (חסר = 1), `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`, ו-`approval_ack = true`. שגיאה: `400 bad_request`.
 
 סדר פעולות:
 1. אם `website` אינו ריק: תשובת הצלחה רגילה עם אסמכתא אקראית, בלי לשמור ובלי מייל (החלטה 12).
@@ -561,7 +566,7 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
   "id": "uuid", "reference": "A1B2C3D4", "status": "pending",
   "customer": { "full_name": "...", "phone": "...", "email": "..." },
   "flight": { "flight_no": "DM101", "destination": "London", "departure_at": "..." },
-  "travelers": 2, "bags": 3, "services": ["porter"], "escort_scope": "full",
+  "travelers": 2, "bags": 3, "services": ["porter"], "wheelchairs": null, "escort_scope": "full",
   "recommended_time": "...", "final_time": null, "manager_notes": null,
   "is_returning_customer": true, "flight_change_pending": false,
   "ai_output": { }
@@ -616,13 +621,14 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
   "previous_meeting_time_local": null,
   "travelers": 2,
   "bags": 3,
-  "services": ["Porter / luggage help"],
+  "services": ["Porter / luggage help", "Wheelchair × 2"],
+  "meeting_point": "Departures hall, Terminal 3, before security.",
   "escort_scope": "Full (to the gate)",
   "ai_paragraph": "..."
 }
 ```
 
-ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean).
+ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean). `meeting_point` נשלח רק ב-`customer_approved` וב-`customer_flight_change`. ב-`services` כמות של 2 ומעלה נכתבת "Wheelchair × N" (Milestone 11).
 
 ### 5.3 תהליך ב-n8n
 
@@ -810,7 +816,7 @@ sereno/                          ריפו ציבורי, ענף main
 | FR-22 (התחברות והרשאות) | Supabase Auth, `lib/auth.js`, `staff/login.html` |
 | FR-23 עד FR-27, FR-29, FR-30 (מנהל ונציג) | `api/orders.js`, `api/order-decision.js`, `manager.html`, `agent.html` |
 | FR-28 (רענון מסך הנציג) | כפתור Refresh ב-`agent.html` |
-| FR-31 (מייל ללקוח) | `lib/notify.js` ← n8n (`customer_approved`, `customer_rejected`) |
+| FR-31 (מייל ללקוח) | `lib/notify.js` ← n8n (`customer_approved`, `customer_rejected`), `data/lists.json` (`meeting_point`) |
 | FR-33 עד FR-35 (ארכיון) | `api/orders.js` עם `view=archive`, `archive.html` |
 | FR-36 עד FR-39 (שינוי טיסה) | `flight_change_pending` ב-`lib/orders-view.js`, `resolve_flight_change`, `customer_flight_change` |
 | FR-40 (הגנה על הטופס) | שדה `website` ומגבלות כמות ב-`api/submit-order.js` |
@@ -1030,3 +1036,18 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Milestone 10 (FR-44): before sending, the customer ticks "I understand my booking is subject to manager approval.", and an order without it must be refused on the server too. The live site and the local run share one database.
 **Decision:** The page sends `approval_ack` with the order; `validateOrderBody` in `lib/validate.js` accepts only the JSON value `true` and otherwise answers `400` "Please confirm that your booking is subject to manager approval.". The check is the last validation step, so other field errors keep their order; the honeypot answers before it. The value is not stored: every saved order passed it. The four booking rules sit right above the checkbox in step 4 on every screen size, and the form's desktop side panel no longer lists them (Asaf, 26.11.2026); the `.split__points` style stays for the staff sign-in panel.
 **Consequences:** No migration. A browser that still has the old form open when the change goes live gets the `400` message and must reload. Old orders are unaffected.
+
+### ADR-40: The wheelchair quantity is its own column, added without breaking the live site
+**Context:** Milestone 11 lets the customer ask for 1 to N wheelchairs (N = travellers). There is one Supabase project, used by the live site and by development, and `services` is read by the AI, the history, the screens and the emails.
+**Decision:** A new optional column `orders.wheelchairs` (1–10, never more than `travelers`, empty without a wheelchair and in older orders); `services` keeps its structure. `004_wheelchairs.sql` adds the column and gives `insert_order_with_limits` a last parameter `p_wheelchairs` with a default, so the previous site version kept saving orders between the migration and the deploy. The server reads a missing quantity as 1, for a form opened before the update.
+**Consequences:** Asaf runs 004 before the push. Re-running `002_functions.sql` after 004 would create a second insert function, so 002 carries a note to run 004 instead. Older orders show "Wheelchair", as before.
+
+### ADR-41: The meeting point is fixed text in `data/lists.json`
+**Context:** The customer and the field agent need the same meeting point (Milestone 11), and it must not come from the AI. M13's lookup page will show it too.
+**Decision:** `data/lists.json` holds `meeting_point`. `GET /api/config` already returns the lists, so the agent page reads it from there; `lib/notify.js` adds it to the approval event, and the flight-change event inherits it. n8n shows it as the first row of those two emails.
+**Consequences:** Changing the sentence is one edit in one file plus a deploy; the n8n row only shows the field it receives, and an event without it renders as before.
+
+### ADR-42: One shared helper writes the services, with the quantity
+**Context:** Services are written on the form's review, the manager and archive panels, the agent card and three emails. They must agree.
+**Decision:** `public/js/services-text.js` (`servicesLabels`) is used by the browser and the server functions, like `meeting-time.js` (ADR-4): one wheelchair or none recorded → "Wheelchair", 2 or more → "Wheelchair × N". The emails get the finished labels, so n8n needed no change for the quantity.
+**Consequences:** The AI recommendation panel keeps naming services without a quantity (the AI recommends services, not quantities).

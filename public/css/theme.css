@@ -193,5 +193,7 @@
 .theme-dark .booking-rules li { color: var(--color-on-dark-soft); }
 .booking-rules li::before { content: ''; flex: none; width: 18px; height: 1px; background: var(--color-gold); transform: translateY(-4px); }
 .consent .check { padding-top: 10px; padding-bottom: 10px; line-height: 1.4; }
+/* Milestone 11: the wheelchair quantity right under its checkbox */
+.field--sub { margin-top: var(--space-2); }
 .field.is-invalid .check,
 .theme-dark .field.is-invalid .check { border: 2px solid var(--color-error); }

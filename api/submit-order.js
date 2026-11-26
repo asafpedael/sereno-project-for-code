@@ -6,6 +6,7 @@ import { getSupabase } from '../lib/supabase.js';
 import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
+import { servicesLabels } from '../public/js/services-text.js';
 import { notify, receivedEmailPayload } from '../lib/notify.js';
 import { formatLocalIL, formatDateOnly, israelDayRange } from '../lib/time.js';
 import { generateOrderDraft } from '../lib/ai.js';
@@ -182,6 +183,8 @@ export default withHandler(['POST'], async (req, res) => {
     p_max_total: MAX_ORDERS_PER_HOUR,
     p_flight_date: order.flight_date,
     p_status: flight ? 'pending' : 'needs_clarification',
+    // Milestone 11: the wheelchair quantity (null without a wheelchair). Needs 004_wheelchairs.sql.
+    p_wheelchairs: order.wheelchairs,
   });
   if (insertError) throw insertError;
   if (!rows || rows.length === 0) {
@@ -223,7 +226,7 @@ export default withHandler(['POST'], async (req, res) => {
     meeting_time_local: recommended ? formatLocalIL(recommended) : null,
     travelers: order.travelers,
     bags: order.bags,
-    services: order.services.map((code) => SERVICE_LABELS[code] || code),
+    services: servicesLabels(order.services, order.wheelchairs, SERVICE_LABELS),
     escort_scope: ESCORT_LABELS[order.escort_scope] || order.escort_scope,
     needs_clarification: !flight,
   });

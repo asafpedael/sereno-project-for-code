@@ -110,7 +110,17 @@
           <fieldset>
             <legend class="fieldset__legend">Optional services</legend>
             <label class="check"><input class="check__input" type="checkbox" name="services" value="porter"> Porter / luggage help</label>
-            <label class="check"><input class="check__input" type="checkbox" name="services" value="wheelchair"> Wheelchair</label>
+            <label class="check"><input class="check__input" type="checkbox" name="services" value="wheelchair" id="service-wheelchair"> Wheelchair</label>
+            <div class="field field--sub" id="field-wheelchairs" hidden>
+              <label class="field__label" for="wheelchairs" id="label-wheelchairs">How many wheelchairs? (1–<span id="wheelchairs-max">2</span>)</label>
+              <div class="stepper" role="group" aria-labelledby="label-wheelchairs">
+                <button class="stepper__btn" type="button" data-target="wheelchairs" data-delta="-1" aria-label="Fewer wheelchairs">−</button>
+                <input class="stepper__input" id="wheelchairs" type="number" inputmode="numeric" min="1" max="2" step="1" value="1"
+                       aria-describedby="wheelchairs-error">
+                <button class="stepper__btn" type="button" data-target="wheelchairs" data-delta="1" aria-label="More wheelchairs">+</button>
+              </div>
+              <p class="field__error" id="wheelchairs-error" hidden></p>
+            </div>
           </fieldset>
 
           <div class="panel-dark" id="meeting-panel" aria-live="polite">

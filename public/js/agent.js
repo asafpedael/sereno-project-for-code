@@ -5,6 +5,7 @@ import { getJson } from './api.js';
 import { el, clear } from './dom.js';
 import { formatTimeIL, formatDateIL, isSameDayIL } from './time.js';
 import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
+import { servicesLabels } from './services-text.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
@@ -18,6 +19,8 @@ const refreshButton = document.getElementById('refresh');
 const statusLine = document.getElementById('status-line');
 
 let labels = { services: {}, escort_scopes: {} };
+// Milestone 11 (plan D1, D2): the fixed meeting point from data/lists.json, via /api/config.
+let meetingPoint = '';
 let orders = [];
 
 function labelMap(list) {
@@ -35,9 +38,10 @@ function escortText(code) {
   return label.replace(/\s*\(.*\)\s*$/, '');
 }
 
-function servicesText(services) {
-  if (!services.length) return '–';
-  return services.map((code) => labels.services[code] || code).join(', ');
+// "Wheelchair × 2" from 2 wheelchairs (Milestone 11, plan D7).
+function servicesText(order) {
+  if (!order.services.length) return '–';
+  return servicesLabels(order.services, order.wheelchairs, labels.services).join(', ');
 }
 
 // Phone link: keep digits and a leading + only.
@@ -80,10 +84,16 @@ function card(order, index) {
       el('a', { className: 'agent-card__phone', attrs: { href: telHref(order.customer.phone) } }, order.customer.phone)),
     el('div', { className: 'agent-card__grid' },
       item('Flight', flightText),
-      item('Services', servicesText(order.services)),
+      item('Services', servicesText(order)),
       item('Travellers · Bags', `${order.travelers} · ${order.bags}`),
       item('Escort', escortText(order.escort_scope))),
   );
+  // Milestone 11 (plan D2): the same meeting point on every card, above the manager notes.
+  if (meetingPoint) {
+    node.append(el('div', { className: 'agent-card__notes agent-card__meeting-point' },
+      el('span', { className: 'agent-card__label' }, 'Meeting point'),
+      el('span', { className: 'agent-card__value' }, meetingPoint)));
+  }
   if (order.manager_notes) {
     node.append(el('div', { className: 'agent-card__notes' },
       el('span', { className: 'agent-card__label' }, 'Manager notes'),
@@ -176,6 +186,7 @@ async function start() {
   try {
     const config = await getJson('/api/config');
     labels = { services: labelMap(config.lists.services), escort_scopes: labelMap(config.lists.escort_scopes) };
+    meetingPoint = typeof config.lists.meeting_point === 'string' ? config.lists.meeting_point : '';
   } catch {
     // Labels are optional: codes are shown instead.
   }

@@ -4,6 +4,7 @@
 import { el, clear } from './dom.js';
 import { formatDayTimeIL, formatDateIL } from './time.js';
 import { staffGet, staffPost } from './session.js';
+import { servicesLabels } from './services-text.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
@@ -58,7 +59,8 @@ export function departureText(order) {
 
 export function servicesText(order) {
   if (!order.services.length) return 'No extra services';
-  return order.services.map((code) => labels.services[code] || code).join(', ');
+  // "Wheelchair × 2" from 2 wheelchairs (Milestone 11, plan D7).
+  return servicesLabels(order.services, order.wheelchairs, labels.services).join(', ');
 }
 
 export function escortText(order) {

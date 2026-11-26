@@ -75,7 +75,7 @@ test('input: first name, flight in Israel time, no email, phone or meeting time'
   assert.deepEqual(input, {
     customer_first_name: 'Daniel',
     flight: { flight_no: 'DM101', destination: 'London', departure_local: '10 Dec 2026, 14:30' },
-    travelers: 2, bags: 3, selected_services: ['porter'], escort_scope: 'full',
+    travelers: 2, bags: 3, selected_services: ['porter'], wheelchairs: null, escort_scope: 'full',
     customer_notes: 'One oversized bag.',
     is_returning_customer: false, history_notes: null, previous_orders: [],
   });
@@ -100,7 +100,7 @@ test('input with history: exact keys, at most 3 previous orders, no ids, email o
   const input = buildOrderDraftInput(ORDER, FLIGHT, HISTORY);
   assert.deepEqual(Object.keys(input).sort(), [
     'bags', 'customer_first_name', 'customer_notes', 'escort_scope', 'flight', 'history_notes',
-    'is_returning_customer', 'previous_orders', 'selected_services', 'travelers',
+    'is_returning_customer', 'previous_orders', 'selected_services', 'travelers', 'wheelchairs',
   ]);
   assert.equal(input.is_returning_customer, true);
   assert.deepEqual(input.previous_orders, [

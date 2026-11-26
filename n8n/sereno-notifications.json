@@ -344,7 +344,7 @@
             {
               "id": "5e7e0000-0000-4000-8000-000000000119",
               "name": "rows",
-              "value": "={{ [\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"Departure\", value: $json.body.departure_local },\n  { label: \"Travellers\", value: $json.body.travelers },\n  { label: \"Checked bags\", value: $json.body.bags },\n  { label: \"Services\", value: ($json.body.services || []).join(', ') || 'None' },\n  { label: \"Escort\", value: $json.body.escort_scope }\n] }}",
+              "value": "={{ [\n  { label: \"Meeting point\", value: $json.body.meeting_point },\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"Departure\", value: $json.body.departure_local },\n  { label: \"Travellers\", value: $json.body.travelers },\n  { label: \"Checked bags\", value: $json.body.bags },\n  { label: \"Services\", value: ($json.body.services || []).join(', ') || 'None' },\n  { label: \"Escort\", value: $json.body.escort_scope }\n] }}",
               "type": "array"
             },
             {
@@ -593,7 +593,7 @@
             {
               "id": "5e7e0000-0000-4000-8000-000000000219",
               "name": "rows",
-              "value": "={{ [\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"New departure\", value: $json.body.departure_local }\n] }}",
+              "value": "={{ [\n  { label: \"Meeting point\", value: $json.body.meeting_point },\n  { label: \"Reference\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"New departure\", value: $json.body.departure_local }\n] }}",
               "type": "array"
             },
             {

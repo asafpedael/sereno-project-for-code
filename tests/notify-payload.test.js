@@ -42,6 +42,7 @@ test('approved email: order details and the final meeting time in Israel time', 
     bags: 3,
     services: ['Porter / luggage help', 'Wheelchair'],
     escort_scope: 'Full (to the gate)',
+    meeting_point: 'Departures hall, Terminal 3, before security.',
     ai_paragraph: 'Hello Daniel, thank you for choosing Sereno.',
   });
 });

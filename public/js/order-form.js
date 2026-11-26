@@ -4,6 +4,7 @@ import { getJson, postJson } from './api.js';
 import { el, clear } from './dom.js';
 import { formatTimeIL, formatDateIL, formatDateTimeIL, isSameDayIL, toIsraelInputs } from './time.js';
 import { meetingTime } from './meeting-time.js';
+import { servicesLabels } from './services-text.js';
 
 const STEPS = 4;
 const SEARCH_DELAY_MS = 300;
@@ -26,6 +27,8 @@ const searchStatus = $('flight-status');
 const departureInput = $('departure-time');
 const travelersInput = $('travelers');
 const bagsInput = $('bags');
+const wheelchairCheck = $('service-wheelchair');
+const wheelchairsInput = $('wheelchairs');
 const btnBack = $('btn-back');
 const btnNext = $('btn-next');
 const btnNextLabel = $('btn-next-label');
@@ -236,7 +239,8 @@ function validateManualFlight() {
 
 // ---------- Step 2: travellers, bags, services, meeting time ----------
 
-const LIMITS = { travelers: { min: 1, max: 10 }, bags: { min: 0, max: 10 } };
+// wheelchairs.max follows the number of travellers (Milestone 11, plan D6): see syncWheelchairs.
+const LIMITS = { travelers: { min: 1, max: 10 }, bags: { min: 0, max: 10 }, wheelchairs: { min: 1, max: 1 } };
 
 // Returns the whole number in the box, or null if it is empty, not whole, or out of range.
 function readCount(name) {
@@ -314,6 +318,45 @@ function selectedServices() {
   return [...form.querySelectorAll('input[name="services"]:checked')].map((input) => input.value);
 }
 
+// ---------- Wheelchair quantity (Milestone 11, plan D6) ----------
+// Ticking "Wheelchair" with 2 or more travellers shows a stepper from 1 to the number of
+// travellers. With one traveller there is nothing to choose (the quantity is 1). Fewer
+// travellers than wheelchairs lowers the quantity with them.
+function syncWheelchairs() {
+  const travelers = readCount('travelers');
+  if (travelers !== null) {
+    LIMITS.wheelchairs.max = travelers;
+    wheelchairsInput.max = String(travelers);
+    $('wheelchairs-max').textContent = String(travelers);
+    const current = Number.parseInt(wheelchairsInput.value, 10);
+    if (Number.isFinite(current) && current > travelers) wheelchairsInput.value = String(travelers);
+  }
+  const show = wheelchairCheck.checked && LIMITS.wheelchairs.max >= 2;
+  $('field-wheelchairs').hidden = !show;
+  if (!show) clearFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput]);
+  updateStepperButtons('wheelchairs');
+}
+
+// The quantity sent with the order: null without a wheelchair, 1 when the stepper is hidden.
+function selectedWheelchairs() {
+  if (!wheelchairCheck.checked) return null;
+  if ($('field-wheelchairs').hidden) return 1;
+  return readCount('wheelchairs');
+}
+
+wheelchairCheck.addEventListener('change', () => {
+  // Ticking again starts at 1.
+  if (wheelchairCheck.checked) wheelchairsInput.value = '1';
+  syncWheelchairs();
+});
+
+wheelchairsInput.addEventListener('input', () => {
+  updateStepperButtons('wheelchairs');
+  if (readCount('wheelchairs') !== null) clearFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput]);
+});
+
+travelersInput.addEventListener('input', syncWheelchairs);
+
 // ---------- Step 3 and 4 inputs ----------
 
 function selectedEscort() {
@@ -352,7 +395,11 @@ const STEP_FIELDS = {
     ['field-flight-no', 'flight-no-error', () => [manualNoInput]],
     ['field-flight-date', 'flight-date-error', () => [manualDateInput]],
   ],
-  2: [['field-travelers', 'travelers-error', () => [travelersInput]], ['field-bags', 'bags-error', () => [bagsInput]]],
+  2: [
+    ['field-travelers', 'travelers-error', () => [travelersInput]],
+    ['field-bags', 'bags-error', () => [bagsInput]],
+    ['field-wheelchairs', 'wheelchairs-error', () => [wheelchairsInput]],
+  ],
   3: [['field-escort', 'escort-error', () => []]],
   4: [
     ...DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
@@ -380,6 +427,11 @@ function validateStep(step) {
     if (readCount('bags') === null) {
       showFieldError('field-bags', 'bags-error', [bagsInput], 'Enter a whole number from 0 to 10.');
       problems.push(bagsInput);
+    }
+    if (!$('field-wheelchairs').hidden && readCount('wheelchairs') === null) {
+      showFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput],
+        `Choose 1 to ${LIMITS.wheelchairs.max} wheelchairs.`);
+      problems.push(wheelchairsInput);
     }
   }
 
@@ -447,8 +499,10 @@ function renderReview() {
   $('review-flight').textContent = flightSummary();
   $('review-travellers').textContent =
     `${plural(readCount('travelers'), 'traveller')} · ${plural(readCount('bags'), 'bag')}`;
-  const services = [...form.querySelectorAll('input[name="services"]:checked')]
-    .map((input) => input.closest('label').textContent.trim());
+  // Same wording as the staff screens and emails: "Wheelchair × 2" from 2 (Milestone 11, plan D7).
+  const labelMap = Object.fromEntries([...form.querySelectorAll('input[name="services"]')]
+    .map((input) => [input.value, input.closest('label').textContent.trim()]));
+  const services = servicesLabels(selectedServices(), selectedWheelchairs(), labelMap);
   $('review-services').textContent = services.length ? services.join(', ') : 'None';
   $('review-escort').textContent = ESCORT_LABELS[selectedEscort()] || '';
 }
@@ -514,6 +568,7 @@ async function submitOrder() {
     travelers: readCount('travelers'),
     bags: readCount('bags'),
     services: selectedServices(),
+    wheelchairs: selectedWheelchairs(), // the server refuses more than the travellers (FR-08)
     escort_scope: selectedEscort(),
     full_name: $('full-name').value.trim(),
     phone: $('phone').value.trim(),
@@ -544,6 +599,7 @@ function showReceived(reference) {
     : `${flightLabel(flight)} · ${formatDateTimeIL(flight.departure_at)}`;
   form.hidden = true;
   form.reset();
+  syncWheelchairs();
   state.flight = null;
   $('step-counter').hidden = true;
   $('received').hidden = false;
@@ -557,4 +613,5 @@ function showReceived(reference) {
 showStep(1, { moveFocus: false });
 updateStepperButtons('travelers');
 updateStepperButtons('bags');
+syncWheelchairs();
 searchFlights();
