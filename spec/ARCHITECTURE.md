@@ -412,12 +412,15 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
 - הקוד מחשב: שעת מפגש, סטטוס, עיגול, מי לקוח חוזר. המודל מקבל את התוצאות ואינו מחשב.
 - ההזמנה נשמרת **גם אם ה-AI נכשל** (ראו "כשל").
 
-### שתי קריאות
+### שלוש קריאות
 
 | קריאה | מתי | מי קורא | פלט |
 |---|---|---|---|
 | `order_draft` | אחרי יצירת הזמנה עם טיסה תקינה | `api/submit-order.js` | המלצת שירותים + פסקה אישית (FR-17, FR-19, FR-20) |
 | `clarification_draft` | כשהמנהל מאשר שהטיסה לא קיימת | `api/order-decision.js`, פעולה `confirm_flight_missing` | פסקת בירור (FR-21) |
+| `faq_match` | הלקוח מקליד שאלה בצ'אט | `api/chat.js` | מזהה שאלה מ-`data/faq.json` או `none` (FR-48) |
+
+ל-`faq_match` נשלחים רק השאלה (עד 200 תווים, בבלוק נתונים) והזוגות מזהה–שאלה של הרשימה, בלי התשובות. סכמת הפלט היא `enum` של המזהים ו-`none`, פסק זמן של 8 שניות ו-`max_output_tokens` 50. כשל מחזיר `none`. השאלה לא נשמרת ולא נרשמת ביומן.
 
 ### מה נשלח למודל (`order_draft`)
 
@@ -517,8 +520,10 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
   "lists": { "statuses": [{"code":"pending","label":"Pending approval"}],
              "services": [{"code":"porter","label":"Porter / luggage help"}, {"code":"wheelchair","label":"Wheelchair"}],
              "escort_scopes": [{"code":"full","label":"Full (to the gate)"}, {"code":"partial","label":"Partial (to security)"}],
-             "meeting_point": "Departures hall, Terminal 3, before security." } } }
+             "meeting_point": "Departures hall, Terminal 3, before security." },
+  "faq": { "greeting": "...", "no_answer": "...", "limit_reached": "...", "items": [ { "id": "meeting-point", "question": "...", "answer": "...", "link": null, "suggested": true } ] } } }
 ```
+`faq` הוא התוכן של `data/faq.json`, השאלות והתשובות של הצ'אט (Milestone 15).
 
 #### `GET /api/flights?q=<text>`
 `q` עד 40 תווים. חיפוש לפי מספר טיסה או יעד (לא תלוי באותיות גדולות). רק טיסות עם `departure_at` מאוחר מעכשיו (החלטה 15). עד 20 תוצאות, ממוין לפי `departure_at`. הדף מציג לכל טיסה תאריך ושעה בשעון ישראל, כי לאותו מספר טיסה יכולים להיות כמה תאריכים.
@@ -578,6 +583,16 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
 `status` הוא סטטוס ללקוח: `pending` (גם `needs_clarification` לפני מייל הבירור), `check_email` (`needs_clarification` אחרי מייל הבירור), `approved`, `rejected`, `completed`. `meeting_time` הוא `final_time` רק ב-`approved` בלי שינוי טיסה ממתין וב-`completed`; אחרת `null`. `meeting_point` רק ב-`pending`, `check_email` ו-`approved`. טיסה שהוקלדה ולא נמצאה: `flight_no` ו-`date` שהוקלדו, `destination` ריק. `estimated_price` ריק בהזמנות שלפני Milestone 13. לא נשלחים הערות מנהל, `ai_output`, הערות הלקוח, שם, טלפון, מייל, נציג, `recommended_time` או המזהה המלא.
 
 כל מקרה שבו לא מוצג כלום (מספר לא קיים, מייל אחר, נעילה, שדה נסתר מלא) מחזיר `404 not_found` עם אותה הודעה: "We couldn't find an order with these details. Please check the order number and the email you booked with. After 5 tries, please wait 15 minutes before trying again." מספר או מייל לא תקינים מחזירים `400` ולא נספרים.
+
+#### `POST /api/chat`
+הצ'אט "Ask Sereno" (Milestone 15, FR-48). בלי טוקן. גוף הבקשה:
+```json
+{ "question": "Where do I meet the escort?", "website": "" }
+```
+- `website` לא ריק: `200` עם `none`, בלי קריאה ל-AI.
+- `question` ריק או ארוך מ-200 תווים: `400` ("Please type a question of up to 200 characters.").
+- יותר מ-8 שאלות בדקה מאותה כתובת: `429` ("Too many questions, please wait a minute."). הספירה בזיכרון של הפונקציה בלבד, לא במסד ולא ביומן.
+- תשובה: `{ "ok": true, "data": { "answer_id": "meeting-point" } }` או `"none"`. כשל של ה-AI מחזיר `none`. הדף מציג את התשובה מ-`faq` מילה במילה. השאלה לא נשמרת ולא חוזרת בתשובה.
 
 #### `GET /api/orders`
 דורש טוקן, תפקיד `manager` או `agent`. פרמטרים (כולם אופציונליים):
@@ -748,7 +763,7 @@ meeting = עיגול כלפי מטה לכפולה של 5 דקות
 | כתובת פרויקט Supabase ומפתח ציבורי (דרך `/api/config`, לכניסת צוות) | `SUPABASE_SECRET_KEY` |
 | טוקן הגישה של המשתמש המחובר (שלו בלבד) | `OPENAI_API_KEY` |
 | תשובות JSON מ-`/api` לפי ההרשאה של התפקיד | `N8N_WEBHOOK_URL` ו-`N8N_WEBHOOK_SECRET` |
-| רשימות קבועות (`data/lists.json`) | סיסמת SMTP של Gmail |
+| רשימות קבועות (`data/lists.json`) ורשימת השאלות והתשובות (`data/faq.json`) | סיסמת SMTP של Gmail |
 | קוד אסמכתא של הזמנה (8 תווים) | הודעות שגיאה גולמיות של Supabase, OpenAI או n8n |
 | | מייל הלקוח וטלפון של לקוחות אחרים (חוץ ממנהל מחובר) |
 | | `ai_output` ו-`previous_orders` לנציג או לאנונימי |
@@ -773,7 +788,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── orders.js                GET  /api/orders
 │   ├── order-decision.js        POST /api/order-decision
 │   ├── agents.js                GET  /api/agents (מנהל בלבד)
-│   └── order-lookup.js          POST /api/order-lookup (בדיקת הזמנה ללקוח)
+│   ├── order-lookup.js          POST /api/order-lookup (בדיקת הזמנה ללקוח)
+│   └── chat.js                  POST /api/chat (צ'אט Ask Sereno)
 ├── lib/                         קוד משותף לפונקציות (לא נחשף ככתובת)
 │   ├── supabase.js              הלקוח היחיד ל-Supabase (מפתח סודי)
 │   ├── auth.js                  אימות טוקן, קריאת תפקיד, requireRole
@@ -785,7 +801,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── orders-view.js           בניית תצוגת הזמנה לפי תפקיד, flight_change_pending
 │   └── time.js                  עיצוב זמנים לשעון ישראל
 ├── data/
-│   └── lists.json               סטטוסים, שירותים, היקפי ליווי (קוד + תווית)
+│   ├── lists.json               סטטוסים, שירותים, היקפי ליווי (קוד + תווית)
+│   └── faq.json                 השאלות והתשובות של הצ'אט, נוסח של אסף
 ├── public/                      האתר הסטטי (outputDirectory)
 │   ├── index.html
 │   ├── order.html
@@ -797,7 +814,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   └── archive.html
 │   ├── css/
 │   │   ├── tokens.css           צבעים, גופנים, ריווחים
-│   │   └── base.css
+│   │   ├── base.css
+│   │   └── chat.css             חלון הצ'אט
 │   ├── js/
 │   │   ├── api.js               fetch ל-/api, הוספת טוקן, טיפול בשגיאות
 │   │   ├── session.js           טוקן ב-sessionStorage, הפניה לפי תפקיד
@@ -807,6 +825,7 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   ├── order-form.js        ארבעה שלבים, ולידציה, חיפוש טיסה
 │   │   ├── boarding-pass.js     כרטיס הטיסה, משותף לטופס ולבדיקת ההזמנה
 │   │   ├── check-order.js       דף בדיקת ההזמנה
+│   │   ├── chat.js              צ'אט Ask Sereno, משותף לדפי הלקוח
 │   │   ├── manager.js
 │   │   ├── agent.js
 │   │   └── archive.js
@@ -1119,3 +1138,18 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Blocking guesses needs a record of wrong tries, but ARCHITECTURE §2 keeps exactly three tables, the stack's maximum. Asaf chose to stay inside the stack (27.11.2026).
 **Decision:** `orders.lookup_guard` and `customers.lookup_guard` (jsonb, empty by default) hold `{ failures, since, locked_until }`. A wrong try adds one failure to every order the typed number names and to the customer of the typed email; failures older than 15 minutes start from zero; the 5th locks for 15 minutes. While the order or the customer is locked, every try with it answers "not found", even the right pair, and the message itself says to wait 15 minutes after 5 tries, so a lock never reveals that a number or an email exists. A right pair that is not locked clears both counters. The limits are constants inside the function.
 **Consequences:** No table and no IP address is stored. A try whose number and email both belong to nobody is not counted (there is nothing to find). Someone who knows a customer's number or email can lock that customer's lookup for 15 minutes; it hides nothing and the customer still gets the emails. 006 adds columns the old site never reads, so it was run before the push without breaking the live site.
+
+### ADR-48: The chat's AI only picks an id from Asaf's list
+**Context:** Milestone 15 (FR-48) adds a customer chat. MILESTONES asks that it answer only from a list of questions and answers Asaf writes, never invent, never promise and never give prices, and send order questions to the order lookup. Asaf chose (27.11.2026) "the AI chooses, his text answers", with OpenAI, already used for the order drafts (ADR-14).
+**Decision:** The list is `data/faq.json` (greeting, "no answer" and limit texts, "See all questions" label and intro, and 13 items `{ id, question, also, answer, link, suggested }`, where `also` is a few other ways customers ask the question, read only by the AI), sent to the browser inside `GET /api/config`. A tapped question is answered in the page without a request. A typed question goes to `POST /api/chat`, which calls `matchFaq` (`lib/ai.js`, the third AI call, `faq_match`): the model gets only the question, cut to 200 characters inside a data block, and each item's `id`, question and `also` phrasings (never the answers or any customer data), and must answer with a strict JSON schema whose only field is an `enum` of the ids and `none`; 8 s timeout, 50 output tokens, `store: false`. An unknown id, a timeout or any error counts as `none`, and the page then shows the fixed "no answer" text with the suggested questions. Tests check that the list has no price, time of day, promise or link.
+**Consequences:** The customer only ever reads Asaf's text, so the bot cannot invent, promise or give a price even when asked (the M15 round, 43 questions including tries to break the rules and two in Hebrew, matched all 43). Changing an answer is an edit of `data/faq.json` and a push. A question the list does not cover gets "no answer"; Sereno has no public email or phone, so the bot sends nobody elsewhere. A question costs one short OpenAI call (about a second).
+
+### ADR-49: The chat's per-minute limit lives in the function's memory only
+**Context:** Asaf chose simple cost and abuse limits for the chat (27.11.2026) and no database change; the stack keeps three tables (ADR-47).
+**Decision:** The page allows questions of up to 200 characters and 20 typed questions per opening of the chat (then the field is replaced by the limit text, and the suggested questions still work). The server refuses an empty or longer question (`400`), answers `none` without an AI call when the anti-bot field is filled, and allows 8 questions a minute per address (`x-forwarded-for`), counted in a `Map` inside `api/chat.js` and never stored or logged. The OpenAI monthly spending limit (ADR-14) is the final ceiling.
+**Consequences:** On Vercel the count holds only inside one warm copy of the function, so it slows a simple script but does not stop a determined one; the spending limit is the real stop. In the local run (`vercel dev`) every request starts a new process, so the per-minute limit cannot be seen there; it is covered by the unit tests. The question is not kept anywhere.
+
+### ADR-50: The chat is one shared script that adds itself to the customer pages
+**Context:** Asaf chose a floating button on every customer page (landing, order form, order lookup), not on the staff screens.
+**Decision:** `public/js/chat.js` and `public/css/chat.css` are linked from the three pages; the script adds the button and the window to the page itself, built with `el` / `textContent`. The button is a small round icon (52px; 48px on phones), deep navy with a thin gold ring and a gold chat icon, named "Questions? Ask Sereno" for screen readers and as a tooltip (Asaf, 27.11.2026, after seeing the first, wider gold button). Phones (under 600px) get a full-screen chat; on the order form under 900px the button sits above the M13 "Your escort" bar and is hidden while the summary is open, and the form gets extra room at the bottom. On the landing page the hero's "Departures only" corner is kept clear of the button (room below it on phones and tablets, room to its right on computers), and the footer gets room on phones. A link answer ("Check your order", "Book your escort") is left out on the page it points to. Nothing is saved in the browser; the list is loaded only when the chat is first opened.
+**Consequences:** The landing page now loads one small script (it had none). Like any floating button, it passes over content while the page scrolls; on short phones (about 667px tall) it sits over part of the hero's corner line in the first view until the page is scrolled.

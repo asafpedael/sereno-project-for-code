@@ -1,0 +1,165 @@
+{
+  "greeting": "Hello! I can answer common questions about Sereno. For anything about your own booking, use Check your order.",
+  "no_answer": "Sorry, I don't have an answer to that. I can help with these questions:",
+  "limit_reached": "You have reached the question limit for now. You can still tap the questions below.",
+  "all_label": "See all questions",
+  "all_intro": "These are all the questions I can answer:",
+  "items": [
+    {
+      "id": "about",
+      "question": "What is Sereno?",
+      "also": [
+        "What is this service?",
+        "Who are you?",
+        "What do you do exactly?"
+      ],
+      "answer": "Sereno is a VIP escort service for departing passengers. A personal escort meets you at the airport at your meeting time and stays with you on the way to your flight: through security, or all the way to the gate.",
+      "link": null,
+      "suggested": false
+    },
+    {
+      "id": "arrivals",
+      "question": "Do you offer arrivals?",
+      "also": [
+        "Can you meet me when I land?",
+        "Do you help with arriving flights?",
+        "Is there an escort on arrival?"
+      ],
+      "answer": "No. Sereno is a departures-only service.",
+      "link": null,
+      "suggested": true
+    },
+    {
+      "id": "meeting-point",
+      "question": "Where do I meet my escort?",
+      "also": [
+        "Where should I go at the airport?",
+        "Which terminal do I go to?",
+        "Where will the escort wait for me?"
+      ],
+      "answer": "Your escort meets you in the departures hall, Terminal 3, before security, at the meeting time in your confirmation email.",
+      "link": null,
+      "suggested": true
+    },
+    {
+      "id": "escort-options",
+      "question": "What is the difference between full and partial escort?",
+      "also": [
+        "Will the escort take me to the gate?",
+        "Does the escort come through security with me?",
+        "Which escort option should I choose?"
+      ],
+      "answer": "Full escort takes you all the way to the gate. Partial escort takes you through security. You choose the option when you book.",
+      "link": "book",
+      "suggested": true
+    },
+    {
+      "id": "how-to-book",
+      "question": "How do I book?",
+      "also": [
+        "How do I make a reservation?",
+        "Do I need an account to book?",
+        "How long does booking take?"
+      ],
+      "answer": "You book online in four short steps, with no account needed: choose your flight, tell us who is travelling, choose your escort, and add your details.",
+      "link": "book",
+      "suggested": true
+    },
+    {
+      "id": "approval",
+      "question": "When is my booking confirmed?",
+      "also": [
+        "What happens after I send my request?",
+        "How will I know if my booking is approved?",
+        "When do I hear back from you?"
+      ],
+      "answer": "Every booking is reviewed by our manager before it is confirmed. We email you the decision, and once it is approved, your meeting time.",
+      "link": null,
+      "suggested": false
+    },
+    {
+      "id": "meeting-time",
+      "question": "How is the meeting time set?",
+      "also": [
+        "How early should I be at the airport?",
+        "What time should I arrive?",
+        "When should I meet the escort?"
+      ],
+      "answer": "We suggest a meeting time based on your departure, the number of travellers and your bags. Our manager confirms it, and you receive it by email.",
+      "link": null,
+      "suggested": false
+    },
+    {
+      "id": "services",
+      "question": "Can I get help with luggage or a wheelchair?",
+      "also": [
+        "Can someone carry my bags?",
+        "Do you have a porter?",
+        "Can I get a wheelchair for my mother?"
+      ],
+      "answer": "Yes. In the booking form you can ask for porter and luggage help, and for wheelchairs, up to the number of travellers.",
+      "link": "book",
+      "suggested": false
+    },
+    {
+      "id": "flight-not-listed",
+      "question": "What if I can't find my flight?",
+      "also": [
+        "My flight is not in the list",
+        "I cannot find my flight number",
+        "What if my flight is missing?"
+      ],
+      "answer": "In the first step of the booking form, choose \"Can't find your flight?\" and type your flight number and date. Our manager will check it and contact you by email if needed.",
+      "link": "book",
+      "suggested": false
+    },
+    {
+      "id": "price",
+      "question": "How much does it cost?",
+      "also": [
+        "Is it expensive?",
+        "What are your prices?",
+        "How much for three people?"
+      ],
+      "answer": "The booking form shows an estimated price as you choose your options. There is no payment on the website, and the final price is confirmed with your booking.",
+      "link": "book",
+      "suggested": false
+    },
+    {
+      "id": "payment",
+      "question": "Do I pay online?",
+      "also": [
+        "Can I pay by credit card?",
+        "When do I pay?",
+        "Do I need to pay now?"
+      ],
+      "answer": "No. There is no payment on the website. The final price is confirmed with your booking.",
+      "link": null,
+      "suggested": false
+    },
+    {
+      "id": "order-number",
+      "question": "Where do I find my order number?",
+      "also": [
+        "I lost my order number",
+        "What is my booking reference?",
+        "Where is my reference code?"
+      ],
+      "answer": "Your order number is the 8-character code on the screen you see after you send your request, and in our emails to you.",
+      "link": null,
+      "suggested": false
+    },
+    {
+      "id": "order-status",
+      "question": "Can I check my booking?",
+      "also": [
+        "Is my booking approved yet?",
+        "Can I change my booking?",
+        "What is the status of my order?"
+      ],
+      "answer": "I can't see bookings. You can check yours on the \"Check your order\" page with your order number and the email you booked with.",
+      "link": "check-order",
+      "suggested": false
+    }
+  ]
+}
