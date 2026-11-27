@@ -5,6 +5,7 @@ import { el, clear } from './dom.js';
 import { formatTimeIL, formatDateIL, formatDateTimeIL, isSameDayIL, toIsraelInputs } from './time.js';
 import { meetingTime } from './meeting-time.js';
 import { servicesLabels } from './services-text.js';
+import { PRICES, estimatePrice, formatPrice, formatAmount } from './price.js';
 
 const STEPS = 4;
 const SEARCH_DELAY_MS = 300;
@@ -18,13 +19,14 @@ const state = {
   flight: null, // { id, flight_no, airline, destination, departure_at }
   manual: false, // true when the customer types the flight instead of choosing it
   submitting: false,
+  sent: false, // true on "Request received" (the summary is hidden there)
 };
 
 const form = $('order-form');
 const searchInput = $('flight-search');
 const resultsBox = $('flight-results');
 const searchStatus = $('flight-status');
-const departureInput = $('departure-time');
+const flightPass = $('flight-pass');
 const travelersInput = $('travelers');
 const bagsInput = $('bags');
 const wheelchairCheck = $('service-wheelchair');
@@ -112,7 +114,6 @@ async function searchFlights() {
 // Typing in the box again reopens the list (and clears the choice).
 function selectFlight(flight) {
   state.flight = flight;
-  departureInput.value = formatDateTimeIL(flight.departure_at);
   searchInput.value = `${flightLabel(flight)} · ${formatDateIL(flight.departure_at)}`;
   searchCounter++; // ignore any search still on its way
   clearTimeout(searchTimer);
@@ -120,12 +121,13 @@ function selectFlight(flight) {
   searchStatus.textContent = `Selected: ${flightLabel(flight)}, ${formatDateTimeIL(flight.departure_at)}.`;
   clearFieldError('field-flight', 'flight-error', [searchInput]);
   updateMeetingTime();
+  renderFlightPass();
 }
 
 function clearSelectedFlight() {
   state.flight = null;
-  departureInput.value = '';
   updateMeetingTime();
+  renderFlightPass();
 }
 
 searchInput.addEventListener('input', () => {
@@ -202,6 +204,7 @@ function setManualMode(manual) {
     searchFlights();
     searchInput.focus();
   }
+  renderSummary();
 }
 
 $('btn-manual').addEventListener('click', () => setManualMode(true));
@@ -262,6 +265,7 @@ function updateStepperButtons(name) {
 }
 
 function updateMeetingTime() {
+  renderSummary();
   const panel = $('meeting-panel');
   const timeEl = $('meeting-time');
   const dateEl = $('meeting-date');
@@ -311,6 +315,7 @@ for (const name of ['travelers', 'bags']) {
     updateStepperButtons(name);
     if (readCount(name) !== null) clearFieldError(`field-${name}`, `${name}-error`, [$(name)]);
     updateMeetingTime();
+    renderFlightPass();
   });
 }
 
@@ -335,6 +340,7 @@ function syncWheelchairs() {
   $('field-wheelchairs').hidden = !show;
   if (!show) clearFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput]);
   updateStepperButtons('wheelchairs');
+  renderSummary();
 }
 
 // The quantity sent with the order: null without a wheelchair, 1 when the stepper is hidden.
@@ -342,6 +348,10 @@ function selectedWheelchairs() {
   if (!wheelchairCheck.checked) return null;
   if ($('field-wheelchairs').hidden) return 1;
   return readCount('wheelchairs');
+}
+
+for (const input of form.querySelectorAll('input[name="services"]')) {
+  input.addEventListener('change', () => renderSummary());
 }
 
 wheelchairCheck.addEventListener('change', () => {
@@ -353,6 +363,7 @@ wheelchairCheck.addEventListener('change', () => {
 wheelchairsInput.addEventListener('input', () => {
   updateStepperButtons('wheelchairs');
   if (readCount('wheelchairs') !== null) clearFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput]);
+  renderSummary();
 });
 
 travelersInput.addEventListener('input', syncWheelchairs);
@@ -365,7 +376,10 @@ function selectedEscort() {
 }
 
 for (const radio of form.querySelectorAll('input[name="escort_scope"]')) {
-  radio.addEventListener('change', () => clearFieldError('field-escort', 'escort-error', []));
+  radio.addEventListener('change', () => {
+    clearFieldError('field-escort', 'escort-error', []);
+    renderSummary();
+  });
 }
 
 const DETAIL_FIELDS = [
@@ -494,17 +508,24 @@ function flightSummary() {
   return state.flight ? `${flightLabel(state.flight)} · ${formatDateTimeIL(state.flight.departure_at)}` : '';
 }
 
+// "Porter / luggage help, Wheelchair × 2", or "None" (the review and the summary).
+function servicesText() {
+  const labelMap = Object.fromEntries([...form.querySelectorAll('input[name="services"]')]
+    .map((input) => [input.value, input.closest('label').querySelector('.check__text').textContent.trim()]));
+  const services = servicesLabels(selectedServices(), selectedWheelchairs(), labelMap);
+  return services.length ? services.join(', ') : 'None';
+}
+
 // The review shows the page's own state, the same values the submit sends.
 function renderReview() {
   $('review-flight').textContent = flightSummary();
   $('review-travellers').textContent =
     `${plural(readCount('travelers'), 'traveller')} · ${plural(readCount('bags'), 'bag')}`;
   // Same wording as the staff screens and emails: "Wheelchair × 2" from 2 (Milestone 11, plan D7).
-  const labelMap = Object.fromEntries([...form.querySelectorAll('input[name="services"]')]
-    .map((input) => [input.value, input.closest('label').textContent.trim()]));
-  const services = servicesLabels(selectedServices(), selectedWheelchairs(), labelMap);
-  $('review-services').textContent = services.length ? services.join(', ') : 'None';
+  $('review-services').textContent = servicesText();
   $('review-escort').textContent = ESCORT_LABELS[selectedEscort()] || '';
+  const price = currentPrice();
+  $('review-price').textContent = price ? formatPrice(price.total) : '';
 }
 
 // "Edit" opens that step with every value kept; Next walks forward again to step 4.
@@ -512,6 +533,176 @@ for (const button of form.querySelectorAll('[data-edit-step]')) {
   button.addEventListener('click', () => {
     if (!state.submitting) showStep(Number(button.dataset.editStep));
   });
+}
+
+// ---------- Estimated price and the "Your escort" summary (Milestone 13, plan D2, D6-D9) ----------
+
+// The estimate for what is on the page now, by the same rule the server stores (price.js).
+// null until an escort is chosen and the counts are valid.
+function currentPrice() {
+  return estimatePrice({
+    travelers: readCount('travelers'),
+    bags: readCount('bags'),
+    services: selectedServices(),
+    wheelchairs: selectedWheelchairs(),
+    escort_scope: selectedEscort(),
+  });
+}
+
+// The price beside each choice (plan D9): "+$30", "Free", "from $300".
+for (const tag of document.querySelectorAll('[data-price]')) {
+  const code = tag.dataset.price;
+  if (code === 'full' || code === 'partial') tag.textContent = `from ${formatPrice(PRICES[code])}`;
+  else tag.textContent = PRICES[code] === 0 ? 'Free' : `+${formatPrice(PRICES[code])}`;
+}
+
+function setSummaryValue(id, text, emptyText) {
+  const node = $(id);
+  node.textContent = text || emptyText;
+  node.classList.toggle('is-empty', !text);
+}
+
+// The flight in the summary: from the list, or what the customer typed.
+function flightParts() {
+  if (state.manual) {
+    const date = isRealDate(manualDateInput.value) ? formatDateOnly(manualDateInput.value) : '';
+    return { flight: normalizeFlightNo(manualNoInput.value), departure: date };
+  }
+  if (!state.flight) return { flight: '', departure: '' };
+  return {
+    flight: flightLabel(state.flight),
+    departure: `${formatDateIL(state.flight.departure_at)}, ${formatTimeIL(state.flight.departure_at)}`,
+  };
+}
+
+// The suggested meeting time for the summary, the pass and the bar (null when there is none yet).
+function meetingParts() {
+  const travelers = readCount('travelers');
+  const bags = readCount('bags');
+  if (state.manual || !state.flight || travelers === null || bags === null) return null;
+  const departure = new Date(state.flight.departure_at);
+  const meeting = meetingTime(departure, travelers, bags);
+  return {
+    time: formatTimeIL(meeting),
+    date: isSameDayIL(meeting, departure) ? '' : `${formatDateIL(meeting)} (day before departure)`,
+  };
+}
+
+function renderSummary() {
+  if (state.sent) return;
+  const { flight, departure } = flightParts();
+  setSummaryValue('sum-flight', flight, 'Choose your flight');
+  setSummaryValue('sum-departure', departure, '–');
+  const travelers = readCount('travelers');
+  const bags = readCount('bags');
+  setSummaryValue('sum-travellers', travelers !== null && bags !== null ? `${travelers} · ${bags}` : '', '–');
+  setSummaryValue('sum-services', servicesText(), 'None');
+  setSummaryValue('sum-escort', ESCORT_LABELS[selectedEscort()] || '', 'Choose your escort');
+
+  // Meeting time: same formula and wording as the step 2 box; a typed flight has none yet.
+  const meeting = meetingParts();
+  const timeEl = $('sum-meeting');
+  timeEl.hidden = state.manual;
+  timeEl.textContent = meeting ? meeting.time : '–:–';
+  $('sum-meeting-note').textContent = state.manual
+    ? 'We will confirm your meeting time after checking your flight.'
+    : 'Suggestion only. Subject to manager approval.';
+  $('sum-meeting-date').textContent = meeting ? meeting.date : '';
+  $('sum-meeting-date').hidden = !(meeting && meeting.date);
+
+  const price = currentPrice();
+  const lines = $('sum-lines');
+  clear(lines);
+  if (price) {
+    for (const line of price.lines) {
+      lines.append(el('li', {}, el('span', {}, line.label), el('span', {}, formatAmount(line.amount))));
+    }
+  }
+  lines.hidden = !price;
+  $('sum-price-empty').hidden = Boolean(price);
+  $('sum-total-row').hidden = !price;
+  $('sum-total').textContent = price ? formatPrice(price.total) : '';
+
+  // Phone bar: "Your escort · Meet 12:45" and the total.
+  $('bar-meeting').textContent = meeting ? ` · Meet ${meeting.time}` : '';
+  $('bar-total').textContent = price ? formatPrice(price.total) : '';
+}
+
+// Phone: the bar opens and closes the summary above it (Escape closes it too).
+const summaryBar = $('summary-bar');
+const summaryAside = $('summary-aside');
+function setSummaryOpen(open) {
+  summaryAside.classList.toggle('is-open', open);
+  summaryBar.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+summaryBar.addEventListener('click', () => setSummaryOpen(!summaryAside.classList.contains('is-open')));
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && summaryAside.classList.contains('is-open')) {
+    setSummaryOpen(false);
+    summaryBar.focus();
+  }
+});
+
+// A typed flight number and date show in the summary as they are typed.
+manualNoInput.addEventListener('input', () => renderSummary());
+manualDateInput.addEventListener('input', () => renderSummary());
+
+// ---------- Boarding pass (Milestone 13, plan D10, D13) ----------
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function planeIcon() {
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('class', 'pass__plane');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', 'M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z');
+  path.setAttribute('transform', 'rotate(90 12 12)');
+  svg.append(path);
+  return svg;
+}
+
+function passField(label, value) {
+  return value ? el('span', { className: 'pass__field' },
+    el('span', { className: 'pass__key' }, label), el('span', { className: 'pass__value' }, value)) : null;
+}
+
+// One card for step 1 and "Request received". stub: [[label, value, big?], ...]; empty values are left out.
+function boardingPass({ flight, typedNo = '', typedDate = '', stub }) {
+  const destination = flight ? flight.destination : '';
+  const main = el('div', { className: 'pass__main' },
+    el('span', { className: 'pass__key' }, 'Your flight'),
+    el('div', { className: 'pass__route' },
+      el('span', { className: 'pass__city' }, 'Tel Aviv'),
+      el('span', { className: 'pass__line' }, planeIcon()),
+      el('span', { className: `pass__city pass__city--to${destination ? '' : ' is-pending'}` },
+        destination || 'To be confirmed')),
+    el('div', { className: 'pass__fields' },
+      passField('Flight', flight ? flight.flight_no : typedNo),
+      passField('Date', flight ? formatDateIL(flight.departure_at) : typedDate),
+      passField('Departs', flight ? formatTimeIL(flight.departure_at) : ''),
+      passField('Airline', flight ? flight.airline || '' : '')));
+  const stubNode = el('div', { className: 'pass__stub' },
+    ...stub.filter(([, value]) => value).map(([label, value, big]) => el('span', { className: 'pass__field' },
+      el('span', { className: 'pass__key' }, label),
+      el('span', { className: big ? 'pass__big' : 'pass__value pass__value--gold' }, value))));
+  return el('div', { className: 'pass' }, main, stubNode);
+}
+
+// Step 1: the chosen flight as a pass, with the suggested meeting time in the stub.
+function renderFlightPass() {
+  clear(flightPass);
+  if (!state.flight || state.manual) {
+    flightPass.hidden = true;
+    return;
+  }
+  const meeting = meetingParts();
+  flightPass.append(boardingPass({
+    flight: state.flight,
+    stub: [['Suggested meeting time', meeting ? meeting.time : '–:–']],
+  }));
+  flightPass.hidden = false;
 }
 
 // ---------- Navigation ----------
@@ -592,11 +783,19 @@ async function submitOrder() {
 }
 
 function showReceived(reference) {
-  const flight = state.flight;
-  $('received-reference').textContent = reference;
-  $('received-flight').textContent = state.manual
-    ? `${normalizeFlightNo(manualNoInput.value)} · ${formatDateOnly(manualDateInput.value)}`
-    : `${flightLabel(flight)} · ${formatDateTimeIL(flight.departure_at)}`;
+  const price = currentPrice();
+  const received = $('received-pass');
+  clear(received);
+  received.append(boardingPass({
+    flight: state.manual ? null : state.flight,
+    typedNo: normalizeFlightNo(manualNoInput.value),
+    typedDate: isRealDate(manualDateInput.value) ? formatDateOnly(manualDateInput.value) : '',
+    stub: [['Order number', reference, true], ['Estimated price', price ? formatPrice(price.total) : '']],
+  }));
+  // The summary has done its job: hide it (and the phone bar) on this screen.
+  state.sent = true;
+  setSummaryOpen(false);
+  summaryAside.classList.add('is-sent');
   form.hidden = true;
   form.reset();
   syncWheelchairs();
@@ -611,6 +810,7 @@ function showReceived(reference) {
 // ---------- Start ----------
 
 showStep(1, { moveFocus: false });
+renderFlightPass();
 updateStepperButtons('travelers');
 updateStepperButtons('bags');
 syncWheelchairs();

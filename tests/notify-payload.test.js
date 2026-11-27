@@ -43,6 +43,7 @@ test('approved email: order details and the final meeting time in Israel time', 
     services: ['Porter / luggage help', 'Wheelchair'],
     escort_scope: 'Full (to the gate)',
     meeting_point: 'Departures hall, Terminal 3, before security.',
+    estimated_price: null, // the row has no price (an order saved before Milestone 13)
     ai_paragraph: 'Hello Daniel, thank you for choosing Sereno.',
   });
 });
@@ -173,6 +174,7 @@ test('received email: reference, flight and departure in Israel time, nothing el
   assert.deepEqual(payload, {
     type: 'customer_received', to: 'daniel@example.com', customer_name: 'Daniel A.', reference: 'A1B2C3D4',
     flight_no: 'DM101', destination: 'London', departure_local: '10 Dec 2026, 14:30',
+    estimated_price: null, // no price given (Milestone 13 adds it with estimatedPrice)
   });
 });
 

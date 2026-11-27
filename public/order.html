@@ -25,11 +25,42 @@
 
   <main class="page split">
     <!-- Desktop only: the Sereno scene beside the form (Asaf, 22.11.2026). -->
-    <aside class="split__aside" aria-label="About your booking">
+    <!-- Milestone 13 (plan D6-D8): the live "Your escort" summary. Desktop: under the heading in
+         the scene panel. Phone: a bar at the bottom of the screen that opens the summary. -->
+    <aside class="split__aside split__aside--summary" id="summary-aside" aria-label="Your escort">
       <div class="split__aside-inner">
         <p class="label-caps split__eyebrow">VIP departure escort</p>
         <h2 class="split__heading">Book your escort in <em>four short steps.</em></h2>
+        <section class="summary" id="summary" aria-labelledby="summary-heading">
+          <h2 class="summary__heading" id="summary-heading">Your escort</h2>
+          <dl class="summary__list">
+            <div><dt>Flight</dt><dd id="sum-flight"></dd></div>
+            <div><dt>Departure</dt><dd id="sum-departure"></dd></div>
+            <div><dt>Travellers · Bags</dt><dd id="sum-travellers"></dd></div>
+            <div><dt>Services</dt><dd id="sum-services"></dd></div>
+            <div><dt>Escort</dt><dd id="sum-escort"></dd></div>
+          </dl>
+          <div class="summary__meet">
+            <p class="summary__label">Suggested meeting time</p>
+            <p class="summary__time" id="sum-meeting" aria-live="polite"></p>
+            <p class="summary__date" id="sum-meeting-date" hidden></p>
+            <p class="summary__note" id="sum-meeting-note">Suggestion only. Subject to manager approval.</p>
+          </div>
+          <div class="summary__price">
+            <ul class="summary__lines" id="sum-lines"></ul>
+            <p class="summary__empty" id="sum-price-empty">Choose your escort to see your price.</p>
+            <div class="summary__total" id="sum-total-row" hidden>
+              <span class="summary__label">Estimated price</span>
+              <span class="summary__amount" id="sum-total" aria-live="polite"></span>
+            </div>
+            <p class="summary__note">No payment now. The final price is confirmed with your booking.</p>
+          </div>
+        </section>
       </div>
+      <button class="summary-bar" type="button" id="summary-bar" aria-expanded="false" aria-controls="summary">
+        <span class="summary-bar__left">Your escort<span id="bar-meeting"></span></span>
+        <span class="summary-bar__right"><span class="summary-bar__amount" id="bar-total"></span><span class="summary-bar__chevron" aria-hidden="true"></span></span>
+      </button>
     </aside>
 
     <div class="split__main theme-dark">
@@ -55,10 +86,8 @@
             <div class="option-list" id="flight-results" role="group" aria-label="Flights" hidden></div>
             <p class="field__error" id="flight-error" hidden></p>
           </div>
-          <div class="field">
-            <label class="field__label" for="departure-time">Departure time</label>
-            <input class="input" id="departure-time" type="text" readonly placeholder="Auto-filled from flight">
-          </div>
+          <!-- Milestone 13 (plan D10): the chosen flight as a boarding pass (replaces "Departure time") -->
+          <div id="flight-pass" hidden></div>
           <p><button class="link-button" type="button" id="btn-manual">Can't find your flight? Enter it manually</button></p>
           </div>
 
@@ -93,6 +122,7 @@
                      aria-describedby="travelers-error">
               <button class="stepper__btn" type="button" data-target="travelers" data-delta="1" aria-label="More travellers">+</button>
             </div>
+            <p class="field__hint">Each extra traveller +$40.</p>
             <p class="field__error" id="travelers-error" hidden></p>
           </div>
 
@@ -104,13 +134,14 @@
                      aria-describedby="bags-error">
               <button class="stepper__btn" type="button" data-target="bags" data-delta="1" aria-label="More bags">+</button>
             </div>
+            <p class="field__hint">One bag per traveller included. Each extra bag +$5.</p>
             <p class="field__error" id="bags-error" hidden></p>
           </div>
 
           <fieldset>
             <legend class="fieldset__legend">Optional services</legend>
-            <label class="check"><input class="check__input" type="checkbox" name="services" value="porter"> Porter / luggage help</label>
-            <label class="check"><input class="check__input" type="checkbox" name="services" value="wheelchair" id="service-wheelchair"> Wheelchair</label>
+            <label class="check"><input class="check__input" type="checkbox" name="services" value="porter"> <span class="check__text">Porter / luggage help</span><span class="check__price" data-price="porter"></span></label>
+            <label class="check"><input class="check__input" type="checkbox" name="services" value="wheelchair" id="service-wheelchair"> <span class="check__text">Wheelchair</span><span class="check__price" data-price="wheelchair"></span></label>
             <div class="field field--sub" id="field-wheelchairs" hidden>
               <label class="field__label" for="wheelchairs" id="label-wheelchairs">How many wheelchairs? (1–<span id="wheelchairs-max">2</span>)</label>
               <div class="stepper" role="group" aria-labelledby="label-wheelchairs">
@@ -138,11 +169,21 @@
           <fieldset class="radio-group" id="field-escort" aria-labelledby="heading-3" aria-describedby="escort-error">
             <label class="radio-card">
               <input class="radio-card__input" type="radio" name="escort_scope" value="full">
-              <span><span class="radio-card__title">Full</span><span class="radio-card__text">Escort to the gate</span></span>
+              <span class="radio-card__body">
+                <span class="radio-card__top"><span class="radio-card__title">Full</span><span class="radio-card__price" data-price="full"></span></span>
+                <span class="radio-card__text">Escort to the gate</span>
+                <span class="route-wrap"><span class="route" aria-hidden="true"><span class="route__dot"></span><span class="route__seg"></span><span class="route__dot"></span><span class="route__seg"></span><span class="route__dot"></span></span>
+                <span class="route__labels" aria-hidden="true"><span>Meeting point</span><span>Security</span><span>Gate</span></span></span>
+              </span>
             </label>
             <label class="radio-card">
               <input class="radio-card__input" type="radio" name="escort_scope" value="partial">
-              <span><span class="radio-card__title">Partial</span><span class="radio-card__text">Escort through security</span></span>
+              <span class="radio-card__body">
+                <span class="radio-card__top"><span class="radio-card__title">Partial</span><span class="radio-card__price" data-price="partial"></span></span>
+                <span class="radio-card__text">Escort through security</span>
+                <span class="route-wrap"><span class="route" aria-hidden="true"><span class="route__dot"></span><span class="route__seg"></span><span class="route__dot"></span><span class="route__seg route__seg--off"></span><span class="route__dot route__dot--off"></span></span>
+                <span class="route__labels" aria-hidden="true"><span>Meeting point</span><span>Security</span><span>Gate</span></span></span>
+              </span>
             </label>
           </fieldset>
           <p class="field__error" id="escort-error" hidden></p>
@@ -196,6 +237,9 @@
                 <div><p class="data-row__label">Escort</p><p class="data-row__value" id="review-escort"></p></div>
                 <button class="link-button" type="button" data-edit-step="3" aria-label="Edit escort scope">Edit</button>
               </div>
+              <div class="data-row">
+                <div><p class="data-row__label">Estimated price</p><p class="data-row__value" id="review-price"></p></div>
+              </div>
             </div>
           </section>
 
@@ -242,17 +286,9 @@
           </svg>
           <h1 class="h3 step-heading" id="heading-received" tabindex="-1">Request received</h1>
           <p class="text-soft">Your request is awaiting manager review. We will email you the decision.</p>
-          <div class="panel received__reference">
-            <p class="received__reference-label">Reference</p>
-            <p class="received__reference-value" id="received-reference"></p>
-          </div>
+          <!-- Milestone 13 (plan D13): the boarding pass with the Order number and the estimate -->
+          <div id="received-pass"></div>
           <div class="panel">
-            <div class="data-row">
-              <div>
-                <p class="data-row__label">Flight</p>
-                <p class="data-row__value" id="received-flight"></p>
-              </div>
-            </div>
             <div class="data-row">
               <div>
                 <p class="data-row__label">Status</p>

@@ -7,6 +7,7 @@ import { withHandler, sendOk, sendError } from '../lib/http.js';
 import { validateOrderBody } from '../lib/validate.js';
 import { meetingTime } from '../public/js/meeting-time.js';
 import { servicesLabels } from '../public/js/services-text.js';
+import { estimatePrice } from '../public/js/price.js';
 import { notify, receivedEmailPayload } from '../lib/notify.js';
 import { formatLocalIL, formatDateOnly, israelDayRange } from '../lib/time.js';
 import { generateOrderDraft } from '../lib/ai.js';
@@ -166,6 +167,11 @@ export default withHandler(['POST'], async (req, res) => {
   //    No meeting time when the typed flight was not found.
   const recommended = flight ? meetingTime(departure, order.travelers, order.bags) : null;
 
+  // 6b. Estimated price (Milestone 13, plan D3): always worked out here from the validated order,
+  //     never taken from the page. Same rule and list as the form (public/js/price.js).
+  const price = estimatePrice(order);
+  const estimatedPrice = price ? price.total : null;
+
   // 7. Order: inserted only if the hourly limits still allow it
   const { data: rows, error: insertError } = await getSupabase().rpc('insert_order_with_limits', {
     p_customer_id: customerId,
@@ -185,6 +191,8 @@ export default withHandler(['POST'], async (req, res) => {
     p_status: flight ? 'pending' : 'needs_clarification',
     // Milestone 11: the wheelchair quantity (null without a wheelchair). Needs 004_wheelchairs.sql.
     p_wheelchairs: order.wheelchairs,
+    // Milestone 13: the estimated price in whole dollars. Needs 005_estimated_price.sql.
+    p_estimated_price: estimatedPrice,
   });
   if (insertError) throw insertError;
   if (!rows || rows.length === 0) {
@@ -215,6 +223,7 @@ export default withHandler(['POST'], async (req, res) => {
     flight,
     typedFlightNo: order.flight_no,
     typedDate: order.flight_date,
+    estimatedPrice,
   }));
   const managerAlert = notify({
     type: 'manager_alert',

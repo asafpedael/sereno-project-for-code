@@ -197,3 +197,146 @@
 .field--sub { margin-top: var(--space-2); }
 .field.is-invalid .check,
 .theme-dark .field.is-invalid .check { border: 2px solid var(--color-error); }
+
+/* ---------- Milestone 13: rich booking form and estimated price ---------- */
+
+/* Price beside each choice (plan D9) */
+.check__text { flex: 1; min-width: 0; }
+.check__price { flex: none; margin-left: auto; font-weight: 600; color: var(--color-ink-soft); }
+.radio-card__body { flex: 1; min-width: 0; display: block; }
+.radio-card__top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); }
+.radio-card__price { flex: none; font-size: var(--fs-small); font-weight: 600; color: var(--color-ink-soft); }
+
+/* Route marker on the escort cards (plan D11; Style Guide "route marker"): solid for what is
+   covered, dashed for the rest. */
+.route-wrap { display: block; margin-top: 14px; }
+.route { display: grid; grid-template-columns: auto 1fr auto 1fr auto; align-items: center; }
+.route__dot { width: 12px; height: 12px; border-radius: 50%; background: var(--color-gold); }
+.route__dot--off { background: transparent; border: 1.6px solid var(--color-ink-soft); }
+.route__seg { height: 0; border-top: 1.6px solid var(--color-gold); }
+.route__seg--off { border-top: 1.6px dashed var(--color-ink-soft); }
+.route__labels { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 6px; font-size: 12.5px; color: var(--color-ink-soft); }
+.route__labels span:nth-child(2) { text-align: center; }
+.route__labels span:last-child { text-align: right; }
+
+/* Boarding pass (plan D10, D13): step 1 and "Request received" */
+.pass {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
+  background: #1C2839;
+  color: #F6F1E8;
+  border: var(--rule-width) solid rgba(207, 154, 83, 0.55);
+  border-radius: var(--radius);
+}
+.pass__main { padding: var(--space-2) 18px; min-width: 0; }
+.pass__key { display: block; font-size: 11.5px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-on-dark-soft); }
+.pass__route { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.pass__city { font-family: var(--font-heading); font-size: 28px; line-height: 1.1; overflow-wrap: anywhere; }
+.pass__city--to { text-align: right; }
+.pass__city.is-pending { font-family: var(--font-body); font-size: var(--fs-small); font-weight: 600; color: var(--color-on-dark-soft); }
+.pass__line { position: relative; flex: 1; min-width: 36px; border-top: 1px dashed rgba(246, 241, 232, 0.4); }
+.pass__plane { position: absolute; left: 50%; top: -10px; width: 20px; height: 20px; transform: translateX(-50%); fill: var(--color-gold); background: #1C2839; }
+.pass__fields { display: flex; flex-wrap: wrap; gap: 10px 22px; margin-top: 14px; }
+.pass__value { display: block; font-size: 15.5px; font-weight: 700; }
+.pass__value--gold { color: var(--color-gold); }
+.pass__stub {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 130px;
+  padding: var(--space-2) 18px;
+  border-left: 2px dashed rgba(207, 154, 83, 0.55);
+  text-align: center;
+}
+.pass__big { display: block; font-family: var(--font-heading); font-size: 30px; line-height: 1.1; letter-spacing: 0.1em; color: var(--color-gold); }
+@media (max-width: 599px) {
+  .pass { grid-template-columns: minmax(0, 1fr); }
+  .pass__stub { flex-direction: row; flex-wrap: wrap; justify-content: space-between; align-items: center; border-left: 0; border-top: 2px dashed rgba(207, 154, 83, 0.55); text-align: left; }
+  .pass__city { font-size: 24px; }
+}
+.received__body #received-pass { width: 100%; }
+
+/* "Your escort" summary (plan D6-D8) */
+.summary {
+  margin-top: var(--space-3);
+  padding: 18px;
+  background: rgba(26, 38, 54, 0.94);
+  border-top: 2px solid var(--color-gold);
+  border-radius: var(--radius);
+  color: var(--color-cream);
+}
+.summary__heading { font-family: var(--font-heading); font-weight: 400; font-size: 24px; line-height: 1.1; margin-bottom: 12px; }
+.summary__list { display: grid; gap: 10px; margin: 0; }
+.summary__list dt { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-on-dark-soft); }
+.summary__list dd { margin: 0; font-size: 15px; font-weight: 700; overflow-wrap: anywhere; }
+.summary__list dd.is-empty { font-weight: 400; color: #8C97A4; }
+.summary__meet { margin-top: 14px; padding: 12px 14px; background: #22344A; border-radius: var(--radius); }
+.summary__label { font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-on-dark-soft); }
+.summary__time { font-family: var(--font-heading); font-size: 34px; line-height: 1.1; color: var(--color-gold); }
+.summary__date { font-size: 13.5px; font-weight: 600; }
+.summary__note { margin-top: 4px; font-size: 12.5px; line-height: 1.45; color: var(--color-on-dark-soft); }
+.summary__price { margin-top: 14px; padding-top: 12px; border-top: var(--rule-width) solid var(--color-rule-dark); }
+.summary__lines { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 13.5px; color: var(--color-on-dark-soft); }
+.summary__lines li { display: flex; justify-content: space-between; gap: 8px; }
+.summary__empty { font-size: 13.5px; color: var(--color-on-dark-soft); }
+.summary__total { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-top: 8px; }
+.summary__amount { font-family: var(--font-heading); font-size: 30px; line-height: 1.1; }
+.summary [hidden] { display: none; }
+
+/* Phone bar (plan D7): hidden on the desktop */
+.summary-bar { display: none; }
+
+@media (min-width: 900px) {
+  /* The summary sits under the heading; the panel scrolls if the window is short. */
+  .split__aside--summary { overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(246, 241, 232, 0.25) transparent; }
+  .split__aside--summary .split__aside-inner { padding-top: var(--space-4); padding-bottom: var(--space-4); }
+  .split__aside--summary .split__heading { font-size: clamp(30px, 2.6vw, 42px); }
+  .split__aside--summary.is-sent .summary { display: none; }
+}
+
+@media (max-width: 899px) {
+  /* The bar is fixed to the bottom of the screen; a tap opens the summary above it. */
+  .split__aside--summary {
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 20;
+    max-height: 85vh;
+    background: var(--color-deep-navy);
+    border-top: 2px solid var(--color-gold);
+    color: var(--color-cream);
+  }
+  .split__aside--summary .split__aside-inner { overflow-y: auto; padding: 0 var(--gutter); }
+  .split__aside--summary .split__eyebrow,
+  .split__aside--summary .split__heading { display: none; }
+  .split__aside--summary .summary { display: none; margin: var(--space-2) 0; background: #1A2636; }
+  .split__aside--summary.is-open .summary { display: block; }
+  .split__aside--summary.is-sent { display: none; }
+  .summary-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 56px;
+    padding: 8px var(--gutter);
+    background: var(--color-deep-navy);
+    border: 0;
+    color: var(--color-cream);
+    font: 600 14.5px var(--font-body);
+    text-align: left;
+    cursor: pointer;
+  }
+  .summary-bar:focus-visible { outline: var(--focus-ring); outline-offset: -4px; }
+  .summary-bar__right { display: flex; align-items: center; gap: 10px; flex: none; }
+  .summary-bar__amount { font-family: var(--font-heading); font-weight: 400; font-size: 22px; color: var(--color-gold); }
+  .summary-bar__chevron { width: 10px; height: 10px; border-left: 1.6px solid currentColor; border-top: 1.6px solid currentColor; transform: translateY(2px) rotate(45deg); }
+  .split__aside--summary.is-open .summary-bar__chevron { transform: translateY(-3px) rotate(225deg); }
+  /* Room for the bar, so the Back and Next buttons are never under it. */
+  .dark-body:has(.split__aside--summary:not(.is-sent)) .split__main { padding-bottom: 72px; }
+}

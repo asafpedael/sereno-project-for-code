@@ -171,6 +171,7 @@ customers 1 ───< N orders N >─── 1 flights
 | `bags` | integer, not null, בין 0 ל-10 | |
 | `services` | jsonb, not null, ברירת מחדל `[]` | מערך קודים מתוך `porter`, `wheelchair` |
 | `wheelchairs` | integer, **יכול להיות ריק**, בין 1 ל-10 ולא יותר מ-`travelers` | כמות כיסאות הגלגלים כש-`wheelchair` נמצא ב-`services`. ריק אחרת, ובהזמנות שלפני Milestone 11 (מוצג כ-"Wheelchair") |
+| `estimated_price` | integer, **יכול להיות ריק**, 0 ומעלה | המחיר המשוער בדולרים שלמים, שהשרת חישב ב-`public/js/price.js` בשליחה (Milestone 13). ריק בהזמנות שלפני Milestone 13 |
 | `escort_scope` | text, not null | `full` או `partial`. בחירת הלקוח בלבד, אין עדכון שלה |
 | `customer_notes` | text | עד 500 תווים |
 | `status` | text, not null, ברירת מחדל `pending` | `pending`, `approved`, `rejected`, `needs_clarification`, `completed` |
@@ -537,7 +538,7 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
 3. מגבלת כמות: יותר מ-3 הזמנות מאותו מייל בשעה האחרונה, או יותר מ-30 הזמנות בשעה האחרונה בכל המערכת, מחזירים `429 too_many_requests` עם ההודעה "Too many requests, please try again later".
 4. חיפוש הטיסה: לפי `flight_id`, ואם נשלח רק `flight_date`, לפי `flight_no` (לא תלוי באותיות גדולות) ותאריך ההמראה בשעון ישראל. טיסה לפי `flight_id` שכבר המריאה: `400`. אם לא נמצאה טיסה עתידית: `flight_id = null`, סטטוס `needs_clarification`, בלי שעת מפגש, ונשמרים `flight_no_submitted` ו-`flight_date_submitted`.
 5. חיפוש הלקוח לפי `email` (אותיות קטנות). אם קיים: משתמשים בו בלי לשנות אותו. אם לא: יצירה. השם והטלפון שהוקלדו נשמרים בהזמנה (`contact_name`, `contact_phone`, החלטה 17).
-6. חישוב `recommended_time` ב-`meeting-time.js` (אם הטיסה נמצאה).
+6. חישוב `recommended_time` ב-`meeting-time.js` (אם הטיסה נמצאה), ו-`estimated_price` ב-`price.js` (תמיד; ערך מהדף לא נלקח).
 7. הכנסת שורת `orders`.
 8. אם הטיסה נמצאה: קריאת `order_draft` ושמירת `ai_output`. אם לא: `ai_output` ריק.
 9. Webhook ל-n8n מסוג `manager_alert` (שמירת ההזמנה כבר הצליחה, כשל במייל לא נחשב כשל בשליחה).
@@ -624,11 +625,12 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
   "services": ["Porter / luggage help", "Wheelchair × 2"],
   "meeting_point": "Departures hall, Terminal 3, before security.",
   "escort_scope": "Full (to the gate)",
+  "estimated_price": "$375",
   "ai_paragraph": "..."
 }
 ```
 
-ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean). `meeting_point` נשלח רק ב-`customer_approved` וב-`customer_flight_change`. ב-`services` כמות של 2 ומעלה נכתבת "Wheelchair × N" (Milestone 11).
+ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`, `customer_received`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean). `meeting_point` נשלח רק ב-`customer_approved` וב-`customer_flight_change`. ב-`services` כמות של 2 ומעלה נכתבת "Wheelchair × N" (Milestone 11). `estimated_price` (טקסט מעוצב, או null בהזמנה ישנה) נשלח ב-`customer_received` וב-`customer_approved` (Milestone 13).
 
 ### 5.3 תהליך ב-n8n
 
@@ -768,6 +770,7 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   ├── session.js           טוקן ב-sessionStorage, הפניה לפי תפקיד
 │   │   ├── dom.js               עזרים לבנייה עם textContent
 │   │   ├── meeting-time.js      נוסחת שעת המפגש (משותף לשרת)
+│   │   ├── price.js             רשימת המחירים וחישוב המחיר המשוער (משותף לשרת)
 │   │   ├── order-form.js        ארבעה שלבים, ולידציה, חיפוש טיסה
 │   │   ├── manager.js
 │   │   ├── agent.js
@@ -777,7 +780,9 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── migrations/
 │   │   ├── 001_schema.sql       טבלאות, RLS, grants
 │   │   ├── 002_functions.sql    decide_order, resolve_flight_change
-│   │   └── 003_agent_assignment.sql  שיבוץ נציג (Milestone 9)
+│   │   ├── 003_agent_assignment.sql  שיבוץ נציג (Milestone 9)
+│   │   ├── 004_wheelchairs.sql       כמות כיסאות גלגלים (Milestone 11)
+│   │   └── 005_estimated_price.sql   מחיר משוער (Milestone 13)
 │   └── seed/
 │       ├── seed.sql             נתוני דמה
 │       └── assign-demo.sql      שיבוץ לבדיקה (Milestone 9)
@@ -1058,3 +1063,13 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** In Milestone 12 Asaf asked for less plain text that looks like a website. After a comparison page and a survey of luxury travel sites he chose Gilda Display (headings) and Montserrat (text), "in the style of Belmond". ADR-8 requires self-hosted fonts; ADR-16's emails used Georgia / Arial only.
 **Decision:** The latin subsets (`gilda-display-latin.woff2`, static 400, 20,204 bytes; `montserrat-latin.woff2`, variable 400–700, 37,956 bytes) replace the two old files in `public/assets/fonts/`, under the same `--font-heading` / `--font-body` tokens and preloads. Gilda Display has one weight, so headings, the brand and the meeting time are set to 400 and `body` has `font-synthesis-weight: none` (no fake bold); buttons are Montserrat 600. Montserrat is wider than Assistant: on phones the staff header tightens its tabs and hides the role label, and the manager's approvals grid is `minmax(0, 1fr)`. `vercel.json` sends `Access-Control-Allow-Origin: *` for `/assets/fonts/*` only, and the n8n "Render email" node declares both fonts with `@font-face` from the live site, keeping Georgia / Arial as fallbacks.
 **Consequences:** Fonts per page fall from 66,428 to 58,160 bytes. Apple Mail and similar apps show the new fonts; Gmail keeps Georgia / Arial. The email fonts depend on the live site's address (`FONT_BASE` in the node). The Style Guide image still shows the old fonts; DESIGN's text is the source.
+
+### ADR-44: The estimated price is one shared module, and the server decides the stored value
+**Context:** In Milestone 13 Asaf gave a price list in US dollars (full $300, partial $200, each with one traveller; +$40 per extra traveller; one bag per traveller free, then +$5 a bag; porter $30 per order; wheelchairs free) and asked for an estimate that updates live in the form and is shown in two customer emails, the manager screen and the archive. The browser cannot read `data/lists.json` without an extra request, and a price sent by the page could be changed by anyone.
+**Decision:** `public/js/price.js` holds the list (`PRICES`) and the rule (`estimatePrice`, with the lines that make the total, and `formatPrice`), shared by the form and the server like `meeting-time.js` (ADR-4). `POST /api/submit-order` works out the price itself from the validated order and stores it in a new optional column `orders.estimated_price` (whole dollars), added by `005_estimated_price.sql` with a defaulted 17th parameter of `insert_order_with_limits`, so the old code kept working during the deploy (ADR-40 pattern). The request body and the reply do not change. `toManagerView` carries it, `toAgentView` does not; the "request received" and approval events carry it as text (`"$375"`) or `null`. The AI is never given the price (PRD prompt limit 1).
+**Consequences:** Changing a price is one line in `price.js` and applies to new orders only; stored estimates are never recomputed. Orders saved before M13 have no price and show none. There is still no payment and no final price in the system: the text "The final price is confirmed with your booking" covers that.
+
+### ADR-45: "Order number" is a label only
+**Context:** Asaf asked that the 8-character order code be called "Order number" everywhere the customer or staff sees it (M13), the same number the order lookup (M14) will ask for.
+**Decision:** Only the visible label changes: the "Request received" card, the archive's first column, and the row label in all six n8n email templates. The code, the API (`reference`) and the email subjects keep their names and values.
+**Consequences:** No data or API change; staff status messages still say "Order A1B2C3D4". The n8n change is made by hand in the live workflow (ADR-5), so emails say "Reference" until Asaf makes it.

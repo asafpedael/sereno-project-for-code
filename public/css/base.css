@@ -394,16 +394,7 @@ a:hover { color: var(--color-deep-navy); }
 .received__body > * { margin-left: auto; margin-right: auto; }
 .received__icon { width: 56px; height: 56px; fill: none; stroke: var(--color-gold-dark); stroke-width: 1.6; }
 .received__icon path { stroke: var(--color-navy); stroke-width: 2.4; }
-.received__reference { text-align: center; }
-.received__reference-label { font-size: var(--fs-small); font-weight: 600; }
-.received__reference-value {
-  font-family: var(--font-body);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: 0.18em;
-}
-.received__body .panel { width: 100%; }
-.received__body .panel:not(.received__reference) { text-align: left; }
+.received__body .panel { width: 100%; text-align: left; }
 
 /* Thin line icons (1.6px, no fill) */
 .icon { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: square; }

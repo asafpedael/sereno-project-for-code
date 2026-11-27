@@ -1,5 +1,6 @@
 -- Milestone 11: how many wheelchairs the customer asked for (FR-08, plan D9, D10).
 -- Run in the Supabase SQL Editor after 001-003. Safe to re-run.
+-- 005_estimated_price.sql (Milestone 13) replaces insert_order_with_limits with a 17-parameter version.
 -- Safe while the previous version of the site is live: the new column may be empty, and
 -- p_wheelchairs has a default, so a call without it still saves an order (the column stays empty).
 -- Nothing is deleted or changed in existing orders.

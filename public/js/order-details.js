@@ -5,6 +5,7 @@ import { el, clear } from './dom.js';
 import { formatDayTimeIL, formatDateIL } from './time.js';
 import { staffGet, staffPost } from './session.js';
 import { servicesLabels } from './services-text.js';
+import { formatPrice } from './price.js';
 
 const GENERIC_MESSAGE = 'Something went wrong. Please try again.';
 
@@ -93,6 +94,8 @@ export function detailsGrid(order, extraItems = []) {
     dataItem('Departure', departureText(order)),
     dataItem('Travellers · Bags', `${order.travelers} · ${order.bags}`),
     dataItem('Services · Escort', `${servicesText(order)} · ${escortText(order)}`),
+    // Milestone 13 (plan D16): the estimate the customer saw; none for orders saved before M13.
+    Number.isInteger(order.estimated_price) ? dataItem('Estimated price', formatPrice(order.estimated_price)) : null,
     ...extraItems);
 }
 
