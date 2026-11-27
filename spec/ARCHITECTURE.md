@@ -140,6 +140,7 @@ customers 1 ───< N orders N >─── 1 flights
 | `phone` | text, not null | הטלפון מההזמנה הראשונה, לא מתעדכן מהטופס |
 | `email` | text, not null, unique | נשמר באותיות קטנות. מפתח זיהוי של הלקוח |
 | `history_notes` | text | היסטוריה חופשית שה-AI משתמש בה. בנתוני הדמה בלבד |
+| `lookup_guard` | jsonb, **יכול להיות ריק** | מונה ניסיונות שגויים בבדיקת הזמנה (`failures`, `since`, `locked_until`). נכתב רק ב-`lookup_order` (Milestone 14). לא מוצג בשום מסך |
 | `created_at` | timestamptz, ברירת מחדל `now()` | |
 
 **לקוח חוזר** לא נשמר כשדה: הוא נגזר מכך שיש ללקוח לפחות הזמנה אחרת אחת בסטטוס `completed` ב-`orders` (החלטה 11). כך אין מצב שהשדה סותר את ההיסטוריה.
@@ -183,6 +184,7 @@ customers 1 ───< N orders N >─── 1 flights
 | `approved_departure_at` | timestamptz | שעת ההמראה בעת האישור. בסיס להשוואה בזיהוי שינוי טיסה |
 | `ignored_departure_at` | timestamptz | שעת המראה חדשה שהמנהל בחר להתעלם ממנה |
 | `decided_at` | timestamptz | |
+| `lookup_guard` | jsonb, **יכול להיות ריק** | מונה ניסיונות שגויים בבדיקת הזמנה (`failures`, `since`, `locked_until`). נכתב רק ב-`lookup_order` (Milestone 14). לא מוצג בשום מסך |
 | `created_at` | timestamptz, ברירת מחדל `now()` | |
 
 אינדקסים: `orders(status)`, `orders(customer_id)`, `orders(flight_id)`, `orders(created_at desc)`, `orders(assigned_agent_id)`.
@@ -331,6 +333,8 @@ Milestone 9: `supabase/migrations/003_agent_assignment.sql` מוסיף ל-`decid
 
 Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמודה `wheelchairs`, ול-`insert_order_with_limits` את `p_wheelchairs` (ברירת מחדל ריקה, כך שגרסה קודמת של האתר ממשיכה לעבוד).
 
+Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup_guard` ל-`orders` ול-`customers`, ואת `lookup_order(p_reference, p_email)`: בנעילה אחת היא מוצאת הזמנה שהמזהה שלה מתחיל ב-8 התווים והמייל של הלקוח שלה שווה למייל שהוקלד, סופרת ניסיון שגוי על ההזמנות ועל הלקוח שהוא נגע בהם, ונועלת ל-15 דקות אחרי 5 שגיאות.
+
 ### נתוני דמה
 
 הקובץ `supabase/seed/seed.sql`, מבוסס על `sereno-demo-data.xlsx` (8 לקוחות, 10 טיסות, 15 הזמנות). לאקסל יש גיליון לכל טבלה (`customers`, `flights`, `orders`) עם שמות עמודות זהים למסד, וגיליון `test_cases` שמסביר מה כל הזמנה בודקת ולא נטען למסד. כללי הייבוא:
@@ -357,6 +361,8 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
 | `manager` | משתמש ב-Supabase Auth | `app_metadata.role = "manager"`, נקבע ידנית בדשבורד |
 | `agent` | משתמש ב-Supabase Auth | `app_metadata.role = "agent"`, נקבע ידנית בדשבורד |
 
+הלקוח לא מתחבר. בדיקת הזמנה (Milestone 14) מזהה הזמנה אחת לפי מספר ההזמנה והמייל יחד, ולא יוצרת טוקן, חשבון או כניסה שנשמרת.
+
 `app_metadata` לא ניתן לעריכה על ידי המשתמש עצמו, בניגוד ל-`user_metadata`. התפקיד נקרא תמיד מתשובת האימות של Supabase, ולא ממה שהדף שולח.
 
 ### תהליך כניסה והזדהות
@@ -380,6 +386,7 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
 | `GET /api/orders?id=` (פרטי הזמנה) | לא | לא (`403`) | כל הזמנה, כולל היסטוריית הלקוח |
 | `POST /api/order-decision` | לא | רק `action = complete` (כל פעולה אחרת `403`), ורק להזמנה שלו או לא משובצת (אחרת `404`) | כן, כל הפעולות חוץ מ-`complete` |
 | `GET /api/agents` | לא | לא (`403`) | כן: רשימת הנציגים (מזהה ושם) |
+| `POST /api/order-lookup` | כן: הזמנה אחת, רק כשהמספר והמייל שלה מתאימים, ורק השדות של סעיף 5.1 | כן (כמו לקוח) | כן (כמו לקוח) |
 
 הגבלות על מה שמוחזר לנציג (צמצום מידע): שם, טלפון, טיסה, נוסעים, מזוודות, שירותים, היקף ליווי, שעת מפגש והערות מנהל. **ללא** מייל הלקוח, ללא `ai_output`, ללא היסטוריית לקוח.
 
@@ -388,7 +395,7 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
 ### הגנה על הנתונים בכל הרמות
 
 - טבלאות נעולות (RLS ללא policies, ללא grants ל-`anon` ו-`authenticated`), ולכן אפילו עם המפתח הציבורי אי אפשר לקרוא טבלה.
-- הלקוח האנונימי יכול רק להוסיף הזמנה דרך `api/submit-order`, ולא לקרוא הזמנות.
+- הלקוח האנונימי יכול להוסיף הזמנה דרך `api/submit-order`, ולקרוא הזמנה אחת דרך `api/order-lookup` רק כשמספר ההזמנה והמייל שלה מתאימים, ורק את השדות שבסעיף 5.1, בלי הערות מנהל, טקסט AI, טלפון, נציג או פרטים של הזמנות אחרות (Milestone 14). הוא לא יכול לרשום הזמנות.
 - `submit-order` לא מחזיר ללקוח נתונים של הזמנות או לקוחות אחרים. התשובה היא קוד אסמכתא בלבד.
 
 ---
@@ -547,6 +554,30 @@ Milestone 11: `supabase/migrations/004_wheelchairs.sql` מוסיף את העמו
 { "ok": true, "data": { "reference": "A1B2C3D4", "status": "pending" } }
 ```
 (`reference` הוא 8 התווים הראשונים של מזהה ההזמנה, באותיות גדולות.) לקוח עם טיסה שלא נמצאה מקבל אותה תשובה עם `status: "pending"` מבחינת תצוגה: מסך האישור נשאר "Your request was received and is awaiting review".
+
+#### `POST /api/order-lookup`
+בדיקת הזמנה ללקוח (Milestone 14, FR-47). בלי טוקן. גוף הבקשה (POST, כדי שהמייל לא יופיע בכתובת):
+```json
+{ "order_number": "A1B2C3D4", "email": "name@example.com", "website": "" }
+```
+סדר פעולות:
+1. אם `website` אינו ריק: `404` כמו הזמנה שלא נמצאה, בלי לגעת במסד.
+2. ולידציה: `order_number` אחרי חיתוך רווחים ואותיות גדולות, בדיוק 8 תווים `0-9 A-F` ("Please enter the 8-character order number."); `email` כמו בטופס, באותיות קטנות ("Please enter a valid email address."). שגיאה: `400 bad_request`, והניסיון לא נספר.
+3. `rpc lookup_order` (סעיף 2). לא נמצאה, או נעולה: `404 not_found`.
+4. קריאת ההזמנה לפי המזהה, עם העמודות הדרושות בלבד (`LOOKUP_SELECT` ב-`lib/orders-view.js`).
+5. תשובה, שנבנית ב-`toCustomerView` מרשימה קבועה של שדות:
+```json
+{ "ok": true, "data": { "order": {
+  "reference": "A1B2C3D4", "status": "approved",
+  "flight": { "flight_no": "DM101", "destination": "London", "airline": "Demo Airlines", "departure_at": "...", "date": null },
+  "meeting_time": "...", "flight_change_pending": false,
+  "meeting_point": "Departures hall, Terminal 3, before security.",
+  "travelers": 2, "bags": 3, "services": "Porter / luggage help", "escort": "Full (to the gate)",
+  "estimated_price": "$375" } } }
+```
+`status` הוא סטטוס ללקוח: `pending` (גם `needs_clarification` לפני מייל הבירור), `check_email` (`needs_clarification` אחרי מייל הבירור), `approved`, `rejected`, `completed`. `meeting_time` הוא `final_time` רק ב-`approved` בלי שינוי טיסה ממתין וב-`completed`; אחרת `null`. `meeting_point` רק ב-`pending`, `check_email` ו-`approved`. טיסה שהוקלדה ולא נמצאה: `flight_no` ו-`date` שהוקלדו, `destination` ריק. `estimated_price` ריק בהזמנות שלפני Milestone 13. לא נשלחים הערות מנהל, `ai_output`, הערות הלקוח, שם, טלפון, מייל, נציג, `recommended_time` או המזהה המלא.
+
+כל מקרה שבו לא מוצג כלום (מספר לא קיים, מייל אחר, נעילה, שדה נסתר מלא) מחזיר `404 not_found` עם אותה הודעה: "We couldn't find an order with these details. Please check the order number and the email you booked with. After 5 tries, please wait 15 minutes before trying again." מספר או מייל לא תקינים מחזירים `400` ולא נספרים.
 
 #### `GET /api/orders`
 דורש טוקן, תפקיד `manager` או `agent`. פרמטרים (כולם אופציונליים):
@@ -741,7 +772,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   ├── submit-order.js          POST /api/submit-order
 │   ├── orders.js                GET  /api/orders
 │   ├── order-decision.js        POST /api/order-decision
-│   └── agents.js                GET  /api/agents (מנהל בלבד)
+│   ├── agents.js                GET  /api/agents (מנהל בלבד)
+│   └── order-lookup.js          POST /api/order-lookup (בדיקת הזמנה ללקוח)
 ├── lib/                         קוד משותף לפונקציות (לא נחשף ככתובת)
 │   ├── supabase.js              הלקוח היחיד ל-Supabase (מפתח סודי)
 │   ├── auth.js                  אימות טוקן, קריאת תפקיד, requireRole
@@ -757,6 +789,7 @@ sereno/                          ריפו ציבורי, ענף main
 ├── public/                      האתר הסטטי (outputDirectory)
 │   ├── index.html
 │   ├── order.html
+│   ├── check-order.html         בדיקת הזמנה ללקוח (Milestone 14)
 │   ├── staff/
 │   │   ├── login.html
 │   │   ├── manager.html
@@ -772,6 +805,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   ├── meeting-time.js      נוסחת שעת המפגש (משותף לשרת)
 │   │   ├── price.js             רשימת המחירים וחישוב המחיר המשוער (משותף לשרת)
 │   │   ├── order-form.js        ארבעה שלבים, ולידציה, חיפוש טיסה
+│   │   ├── boarding-pass.js     כרטיס הטיסה, משותף לטופס ולבדיקת ההזמנה
+│   │   ├── check-order.js       דף בדיקת ההזמנה
 │   │   ├── manager.js
 │   │   ├── agent.js
 │   │   └── archive.js
@@ -782,7 +817,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   ├── 002_functions.sql    decide_order, resolve_flight_change
 │   │   ├── 003_agent_assignment.sql  שיבוץ נציג (Milestone 9)
 │   │   ├── 004_wheelchairs.sql       כמות כיסאות גלגלים (Milestone 11)
-│   │   └── 005_estimated_price.sql   מחיר משוער (Milestone 13)
+│   │   ├── 005_estimated_price.sql   מחיר משוער (Milestone 13)
+│   │   └── 006_order_lookup.sql      בדיקת הזמנה ללקוח (Milestone 14)
 │   └── seed/
 │       ├── seed.sql             נתוני דמה
 │       └── assign-demo.sql      שיבוץ לבדיקה (Milestone 9)
@@ -1073,3 +1109,13 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Asaf asked that the 8-character order code be called "Order number" everywhere the customer or staff sees it (M13), the same number the order lookup (M14) will ask for.
 **Decision:** Only the visible label changes: the "Request received" card, the archive's first column, and the row label in all six n8n email templates. The code, the API (`reference`) and the email subjects keep their names and values.
 **Consequences:** No data or API change; staff status messages still say "Order A1B2C3D4". The n8n change is made by hand in the live workflow (ADR-5), so emails say "Reference" until Asaf makes it.
+
+### ADR-46: The order lookup matches number and email in one locked database function
+**Context:** Milestone 14 (FR-47) lets an anonymous customer read one order. MILESTONES asks that only the right order number and email show it, that a right number with another email look exactly like a missing order, and that repeated tries be blocked. The order number is the first 8 characters of the order id (ADR-45), and the stack wants actions that can run at the same moment written as a database function (ADR-7).
+**Decision:** `POST /api/order-lookup` (POST, so the email is never in an address) checks the format, then calls `public.lookup_order(p_reference, p_email)` (`006_order_lookup.sql`): under advisory lock 727002 it finds the order whose id starts with the 8 characters and whose customer's email is the typed one, and returns only `(is_found, order_id)`. The server then reads the order with `LOOKUP_SELECT` (only the columns the page needs) and answers with `toCustomerView`, a fixed list of fields: customer status (`needs_clarification` shows as `pending` until the clarification email, then `check_email`), flight, meeting time only when approved without a pending flight change or completed, the meeting point for pending / check_email / approved, travellers, bags, service and escort labels, and the formatted estimate. Every case that shows nothing (missing number, other email, lock, anti-bot field) answers the same `404` and message. The page `check-order.html` reuses the boarding-pass card, moved to `public/js/boarding-pass.js`, and is linked only from the landing page (top navigation and footer).
+**Consequences:** Manager notes, AI text, customer notes, name, phone, email, agent and the full id never leave the server (tested). The 8-character number stays as it is; with the email required and the lock below, guessing is not practical. A malformed number or email gets a field message and is not counted.
+
+### ADR-47: Wrong lookup tries are counted on `orders` and `customers`, not in a fourth table
+**Context:** Blocking guesses needs a record of wrong tries, but ARCHITECTURE §2 keeps exactly three tables, the stack's maximum. Asaf chose to stay inside the stack (27.11.2026).
+**Decision:** `orders.lookup_guard` and `customers.lookup_guard` (jsonb, empty by default) hold `{ failures, since, locked_until }`. A wrong try adds one failure to every order the typed number names and to the customer of the typed email; failures older than 15 minutes start from zero; the 5th locks for 15 minutes. While the order or the customer is locked, every try with it answers "not found", even the right pair, and the message itself says to wait 15 minutes after 5 tries, so a lock never reveals that a number or an email exists. A right pair that is not locked clears both counters. The limits are constants inside the function.
+**Consequences:** No table and no IP address is stored. A try whose number and email both belong to nobody is not counted (there is nothing to find). Someone who knows a customer's number or email can lock that customer's lookup for 15 minutes; it hides nothing and the customer still gets the emails. 006 adds columns the old site never reads, so it was run before the push without breaking the live site.

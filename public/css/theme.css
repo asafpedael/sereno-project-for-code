@@ -340,3 +340,22 @@
   /* Room for the bar, so the Back and Next buttons are never under it. */
   .dark-body:has(.split__aside--summary:not(.is-sent)) .split__main { padding-bottom: 72px; }
 }
+
+/* ---------- Order lookup (Milestone 14, plan D1-D3) ---------- */
+.lookup { width: 100%; }
+.lookup__eyebrow { color: var(--color-gold); letter-spacing: 0.14em; }
+.lookup__number { text-transform: uppercase; letter-spacing: 0.12em; }
+.lookup__number::placeholder { text-transform: none; letter-spacing: 0.12em; }
+.lookup-result #result-pass { width: 100%; }
+.pass__tag { align-self: center; }
+.lookup-point {
+  padding: 12px var(--space-2);
+  border: var(--rule-width) solid var(--color-rule-light);
+  border-radius: var(--radius);
+}
+.lookup-point__value { margin: 4px 0 0; font-size: 15px; font-weight: 600; }
+.lookup-items { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2) var(--space-3); margin: 0; }
+.lookup-items dd { margin: 4px 0 0; font-size: var(--fs-small); font-weight: 700; overflow-wrap: anywhere; }
+.lookup-result .action-bar { flex-wrap: wrap; }
+@media (max-width: 359px) { .lookup-items { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 900px) { .lookup { max-width: 600px; } }

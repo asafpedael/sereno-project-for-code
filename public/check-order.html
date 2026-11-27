@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Check your order · Sereno</title>
+  <meta name="description" content="Check the status of your Sereno escort with your order number and email.">
+  <link rel="preload" href="/assets/fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/assets/fonts/gilda-display-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/theme.css">
+  <script type="module" src="/js/check-order.js"></script>
+</head>
+<body class="dark-body">
+  <header class="site-header">
+    <div class="site-header__inner site-header__inner--full">
+      <a class="brand-link" href="/">
+        <span class="brand">Sereno</span>
+        <span class="brand-link__tagline">quality. speed. comfort.</span>
+      </a>
+    </div>
+  </header>
+
+  <!-- Milestone 14 (FR-47): the customer's order lookup, in the same split layout and dark
+       form as the order form and the staff sign in. -->
+  <main class="page split">
+    <aside class="split__aside split__aside--banner" aria-label="About the order lookup">
+      <div class="split__aside-inner">
+        <p class="label-caps split__eyebrow">Your booking</p>
+        <h2 class="split__heading">Your escort, <em>at a glance.</em></h2>
+        <ul class="split__points">
+          <li>Use the order number from your confirmation.</li>
+          <li>Use the email you booked with.</li>
+          <li>Every booking is subject to manager approval.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <div class="split__main split__main--center theme-dark">
+      <div class="container-narrow lookup card-page">
+
+        <form id="lookup-form" class="stack-lg" novalidate>
+          <div class="stack">
+            <h1 class="h3 step-heading" id="lookup-heading" tabindex="-1">Check your order</h1>
+            <p class="text-soft">Enter the order number from your confirmation and the email you booked with.</p>
+          </div>
+
+          <div class="field" id="field-order-number">
+            <label class="field__label" for="order-number">Order number</label>
+            <input class="input lookup__number" id="order-number" type="text" maxlength="12" autocomplete="off"
+                   autocapitalize="characters" spellcheck="false" placeholder="A1B2C3D4" aria-describedby="order-number-error">
+            <p class="field__error" id="order-number-error" hidden></p>
+          </div>
+
+          <div class="field" id="field-lookup-email">
+            <label class="field__label" for="lookup-email">Email</label>
+            <input class="input" id="lookup-email" type="email" maxlength="254" autocomplete="email"
+                   placeholder="name@example.com" aria-describedby="lookup-email-error">
+            <p class="field__error" id="lookup-email-error" hidden></p>
+          </div>
+
+          <!-- Anti-bot field: hidden from people, left empty by real browsers -->
+          <div class="visually-hidden" aria-hidden="true">
+            <label for="website">Website</label>
+            <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+          </div>
+
+          <div class="stack">
+            <p class="alert-error" id="lookup-error" role="alert" hidden></p>
+            <button class="btn btn-primary btn-block" id="lookup-submit" type="submit">
+              <span id="lookup-submit-label">Check order</span>
+              <svg class="btn__arrow icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 12h15M13 6l6 6-6 6"/></svg>
+            </button>
+          </div>
+        </form>
+
+        <section class="lookup-result stack-lg" id="lookup-result" aria-labelledby="result-heading" hidden>
+          <div class="stack">
+            <p class="label-caps lookup__eyebrow" id="result-number"></p>
+            <h1 class="h3 step-heading" id="result-heading" tabindex="-1"></h1>
+            <p class="text-soft" id="result-line"></p>
+          </div>
+          <div id="result-pass"></div>
+          <div class="lookup-point" id="result-point" hidden>
+            <p class="pass__key">Meeting point</p>
+            <p class="lookup-point__value" id="result-point-value"></p>
+          </div>
+          <dl class="lookup-items" id="result-items"></dl>
+          <div class="action-bar">
+            <button class="btn btn-secondary" type="button" id="lookup-again">Check another order</button>
+            <a class="btn btn-secondary" href="/">Back to home</a>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+</body>
+</html>

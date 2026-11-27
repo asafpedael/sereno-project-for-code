@@ -46,6 +46,7 @@
 | 3 | אישור למנהל | מנהל | 7 Manager · Approvals |
 | 4 | נציג שטח (המסך העיקרי) | נציג שטח | 8 Field agent · Orders |
 | 5 | ארכיון | מנהל, נציג שטח | 9 Archive |
+| 6 | בדיקת הזמנה | לקוח | (לא בתמונות; Milestone 14) |
 
 ---
 
@@ -58,7 +59,7 @@
 > **עודכן 22.11.2026 (החלטה של אסף, Milestone 6):** אזור הפתיחה נבנה לפי עיצוב חדש שאסף בחר, ולא לפי התמונות. הכותרת העליונה ואזור הפתיחה שלהלן מחליפים את מה שבתמונות. שאר המסך לא השתנה.
 
 - אזור פתיחה כהה ברוחב מלא, בגובה המסך: ברקע סצנה מצוירת (SVG) של חלונות טרמינל בשקיעה, עם שמש, קו אופק, אורות מסלול ומטוס, ושכבת Deep Navy מתחת לטקסט.
-- כותרת עליונה על גבי אזור הפתיחה: השם Sereno ומתחתיו "quality. speed. comfort.", קישורים "How it works", "About" ו-"Escort options" (קופצים לחלקים בדף, בדסקטופ בלבד), וכפתור זהב "Book your escort".
+- כותרת עליונה על גבי אזור הפתיחה: השם Sereno ומתחתיו "quality. speed. comfort.", קישורים "How it works", "About" ו-"Escort options" (קופצים לחלקים בדף, בדסקטופ בלבד), וכפתור זהב "Book your escort". קישור "Check your order" אחרי קישורי הניווט (דסקטופ), וגם בכותרת התחתונה (Milestone 14).
 - טקסט הפתיחה: "VIP DEPARTURE ESCORT" (זהב, אותיות גדולות), הכותרת "Your journey deserves a better beginning." (המילים "better beginning." באיטליק זהב), הפסקה "Enjoy a more seamless airport departure with Sereno. From your meeting time to your personal escort, the details are carefully coordinated around your flight.", כפתור זהב "Book your escort" עם חץ, וקישור "See how it works".
 - בפינה התחתונה: קו זהב קצר, "QUALITY. SPEED. COMFORT." ו-"DEPARTURES ONLY".
 - "How it works": שלושה צעדים ממוספרים: Choose your flight, Tell us who is travelling, Receive your meeting time by email.
@@ -173,6 +174,18 @@
 
 ---
 
+## 6. בדיקת הזמנה (Milestone 14)
+
+**מטרה:** הלקוח רואה את מצב ההזמנה שלו בלי לפנות לאף אחד, לפי מספר ההזמנה והמייל שאיתו הזמין.
+
+**מה יש במסך:** עמודה אחת במראה הכהה (`check-order.html`), עם אותה כותרת עליונה כמו בטופס. "Your booking" (תווית קטנה באותיות גדולות), הכותרת "Check your order", המשפט "Enter the order number from your confirmation and the email you booked with.", השדות "Order number" ו-"Email", והכפתור "Check order".
+
+**התוצאה:** "Order A1B2C3D4", כותרת ומשפט לפי הסטטוס (Awaiting manager review / Please check your email / Your escort is confirmed / Not approved / Completed), כרטיס הטיסה מ-Milestone 13 עם "Meeting time" ותגית הסטטוס בצד, תיבת "Meeting point" בקו דק, ו-Travellers · Bags, Escort, Services ו-Estimated price. שעת המפגש מוצגת רק אחרי אישור; כשהטיסה השתנתה וממתינה למנהל: "Being updated". מתחת "Check another order" ו-"Back to home".
+
+**הודעת שגיאה אחת** לכל מקרה שבו לא מוצג כלום (מספר שגוי, מייל אחר, נעילה): "We couldn't find an order with these details. Please check the order number and the email you booked with. After 5 tries, please wait 15 minutes before trying again."
+
+---
+
 ## הניווט בין המסכים
 
 **לקוח:** דף נחיתה ← שלב 1 (Flight) ← שלב 2 (Travellers) ← שלב 3 (Escort) ← שלב 4 (Details and review) ← Request received ← "Back to home" ← דף נחיתה. בשלבים 2 עד 4 אפשר לחזור צעד אחורה עם "Back", והנתונים נשמרים.
@@ -205,6 +218,7 @@
 - **כמות כיסאות גלגלים ונקודת מפגש (Milestone 11, החלטה של אסף, 26.11.2026):** בכל המסכים ובמיילים, 2 כיסאות ומעלה מוצגים "Wheelchair × 2", וכיסא אחד או הזמנה ישנה "Wheelchair". נקודת המפגש מופיעה כשורה ראשונה מתחת לשעת המפגש במייל האישור ובמייל שינוי הטיסה, ובכרטיס הנציג בתיבה בסגנון "Manager notes".
 - **גופנים (Milestone 12, החלטה של אסף, 26.11.2026):** בכל המסכים ובמיילים הגופנים הם Gilda Display ו-Montserrat ולא אלה שבתמונות (ראו חלק 2, "גופנים"). במיילים הם מוצגים רק בתוכנות מייל שתומכות בגופני רשת (למשל המייל של אייפון); ב-Gmail נשארים Georgia ו-Arial.
 - **טופס הזמנה עשיר ומחיר משוער (Milestone 13, החלטה של אסף, 27.11.2026):** הסיכום, כרטיס הטיסה, ציור המסלול (רכיב "סימון מסלול" מה-Style Guide) ומסך הסיום ככרטיס נבנים במראה הכהה, בלי צללים, כרטיסים בפינות 2px ושדות בפינות 8px. "Order number" מחליף את "Reference" בכל המסכים והמיילים. המחירים בדולרים ומגיעים רק מרשימת המחירים (PRD, סעיף 3).
+- **בדיקת הזמנה (Milestone 14, החלטה של אסף, 27.11.2026):** הדף לא מופיע בתמונות. הוא בנוי מרכיבים קיימים: כרטיס הטיסה, תגיות הסטטוס ותיבת נתונים בקו דק.
 
 ## עיצוב "אתרי" לטופס ולמסכי הצוות (עודכן 22.11.2026, החלטה של אסף, Milestone 6)
 

@@ -190,3 +190,6 @@
   padding: var(--space-3) var(--gutter);
   text-align: center;
 }
+.site-footer { display: flex; flex-direction: column; align-items: center; gap: var(--space-1); }
+.site-footer__link { color: var(--color-cream); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.site-footer__link:hover { color: var(--color-gold); }
