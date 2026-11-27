@@ -18,14 +18,19 @@ export const STATUS_TAGS = {
 };
 
 // Service and escort labels from /api/config (codes are shown until they are loaded).
-let labels = { services: {}, escort_scopes: {} };
+let labels = { services: {}, escort_scopes: {}, escort_languages: {}, arrival_methods: {} };
 
 function labelMap(list) {
   return Object.fromEntries((list || []).map((item) => [item.code, item.label]));
 }
 
 export function setLabels(lists) {
-  labels = { services: labelMap(lists && lists.services), escort_scopes: labelMap(lists && lists.escort_scopes) };
+  labels = {
+    services: labelMap(lists && lists.services),
+    escort_scopes: labelMap(lists && lists.escort_scopes),
+    escort_languages: labelMap(lists && lists.escort_languages),
+    arrival_methods: labelMap(lists && lists.arrival_methods),
+  };
 }
 
 export function statusTag(status) {
@@ -68,6 +73,20 @@ export function escortText(order) {
   return labels.escort_scopes[order.escort_scope] || order.escort_scope;
 }
 
+// Milestone 16 (plan D12, D13): "English", "Taxi or shuttle" ('' when not given; a code
+// is shown until the labels are loaded).
+export function languageText(order) {
+  return order.escort_language ? (labels.escort_languages[order.escort_language] || order.escort_language) : '';
+}
+export function arrivalText(order) {
+  return order.arrival_method ? (labels.arrival_methods[order.arrival_method] || order.arrival_method) : '';
+}
+// "English · Taxi or shuttle", or '' for an order saved before M16.
+export function extrasText(order) {
+  if (!order.escort_language && !order.arrival_method) return '';
+  return `${languageText(order) || '–'} · ${arrivalText(order) || '–'}`;
+}
+
 export function flightText(order) {
   return order.flight.destination ? `${order.flight.flight_no} · ${order.flight.destination}` : order.flight.flight_no;
 }
@@ -90,6 +109,9 @@ export function detailsGrid(order, extraItems = []) {
   return el('div', { className: 'details-grid' },
     dataItem('Customer', order.customer.full_name),
     dataItem('Phone / Email', `${order.customer.phone} · ${order.customer.email}`),
+    // Milestone 16 (plan D12): only when the customer gave them.
+    order.traveller_names ? dataItem('Also travelling', order.traveller_names) : null,
+    extrasText(order) ? dataItem('Language · Getting there', extrasText(order)) : null,
     dataItem('Flight', flightText(order)),
     dataItem('Departure', departureText(order)),
     dataItem('Travellers · Bags', `${order.travelers} · ${order.bags}`),

@@ -193,6 +193,11 @@ export default withHandler(['POST'], async (req, res) => {
     p_wheelchairs: order.wheelchairs,
     // Milestone 13: the estimated price in whole dollars. Needs 005_estimated_price.sql.
     p_estimated_price: estimatedPrice,
+    // Milestone 16 (plan D10): the other travellers' names, the escort language and the way to
+    // the airport (null when not given). Needs 007_order_details.sql.
+    p_traveller_names: order.traveller_names,
+    p_escort_language: order.escort_language,
+    p_arrival_method: order.arrival_method,
   });
   if (insertError) throw insertError;
   if (!rows || rows.length === 0) {

@@ -91,7 +91,8 @@ test('agent view: exactly the fields the agent needs, no email, AI, notes or his
   assert.deepEqual(Object.keys(view).sort(), [
     'assigned_to_me', 'bags', 'customer', 'escort_scope', 'final_time', 'flight', 'id', 'manager_notes',
     'reference', 'services', 'status', 'travelers', 'wheelchairs',
-  ]);
+    'traveller_names', 'escort_language', 'arrival_method', // Milestone 16
+  ].sort());
   assert.deepEqual(view.customer, { full_name: 'Daniel A.', phone: '050-1110001' });
   assert.equal(view.manager_notes, 'secret note');
   const text = JSON.stringify(view);

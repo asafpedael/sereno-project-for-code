@@ -341,7 +341,54 @@ function syncWheelchairs() {
   $('field-wheelchairs').hidden = !show;
   if (!show) clearFieldError('field-wheelchairs', 'wheelchairs-error', [wheelchairsInput]);
   updateStepperButtons('wheelchairs');
+  syncTravellerNames();
   renderSummary();
+}
+
+// ---------- Other travellers' names (Milestone 16, plan D4) ----------
+// The box shows only with 2 or more travellers. Going back to 1 keeps the typed text (Back
+// never loses data), but it is not sent.
+const namesInput = $('traveller-names');
+function syncTravellerNames() {
+  const travelers = readCount('travelers');
+  const show = travelers !== null && travelers >= 2;
+  $('field-traveller-names').hidden = !show;
+  if (!show) clearFieldError('field-traveller-names', 'traveller-names-error', [namesInput]);
+}
+namesInput.addEventListener('input', () => clearFieldError('field-traveller-names', 'traveller-names-error', [namesInput]));
+
+// The names sent with the order: null when the box is hidden or empty.
+function selectedTravellerNames() {
+  if ($('field-traveller-names').hidden) return null;
+  return namesInput.value.trim() || null;
+}
+
+// ---------- Escort language and the way to the airport (Milestone 16, plan D2, D3) ----------
+const languageSelect = $('escort-language');
+function selectedLanguage() {
+  return languageSelect.value || null;
+}
+function selectedArrival() {
+  const checked = form.querySelector('input[name="arrival_method"]:checked');
+  return checked ? checked.value : null;
+}
+// Labels as written on the page (the same text as data/lists.json, checked by a test).
+function languageText() {
+  const option = languageSelect.selectedOptions[0];
+  return option ? option.textContent.trim() : '';
+}
+function arrivalText() {
+  const value = selectedArrival();
+  if (!value) return '';
+  const input = form.querySelector(`input[name="arrival_method"][value="${value}"]`);
+  return input ? input.closest('label').querySelector('.arrival__text').textContent.trim() : '';
+}
+languageSelect.addEventListener('change', () => renderSummary());
+for (const radio of form.querySelectorAll('input[name="arrival_method"]')) {
+  radio.addEventListener('change', () => {
+    clearFieldError('field-arrival', 'arrival-error', []);
+    renderSummary();
+  });
 }
 
 // The quantity sent with the order: null without a wheelchair, 1 when the stepper is hidden.
@@ -415,9 +462,10 @@ const STEP_FIELDS = {
     ['field-bags', 'bags-error', () => [bagsInput]],
     ['field-wheelchairs', 'wheelchairs-error', () => [wheelchairsInput]],
   ],
-  3: [['field-escort', 'escort-error', () => []]],
+  3: [['field-escort', 'escort-error', () => []], ['field-arrival', 'arrival-error', () => []]],
   4: [
     ...DETAIL_FIELDS.map(([inputId, fieldId, errorId]) => [fieldId, errorId, () => [$(inputId)]]),
+    ['field-traveller-names', 'traveller-names-error', () => [namesInput]],
     ['field-ack', 'ack-error', () => [ackInput]],
   ],
 };
@@ -454,6 +502,11 @@ function validateStep(step) {
     showFieldError('field-escort', 'escort-error', [], 'Please choose an escort scope.');
     problems.push(form.querySelector('input[name="escort_scope"]'));
   }
+  // Milestone 16 (plan D3): the way to the airport is required (the language always has a value).
+  if (step === 3 && !selectedArrival()) {
+    showFieldError('field-arrival', 'arrival-error', [], 'Please choose how you will get to the airport.');
+    problems.push(form.querySelector('input[name="arrival_method"]'));
+  }
 
   if (step === 4) {
     const name = $('full-name').value.trim();
@@ -473,6 +526,11 @@ function validateStep(step) {
       showFieldError('field-email', 'email-error', [$('email')],
         email ? 'Enter a full email address.' : 'Please enter your email address.');
       problems.push($('email'));
+    }
+    // Milestone 16 (plan D4): the names box is optional, up to 300 characters.
+    if (!$('field-traveller-names').hidden && charLength(namesInput.value.trim()) > 300) {
+      showFieldError('field-traveller-names', 'traveller-names-error', [namesInput], 'Names must be 300 characters or fewer.');
+      problems.push(namesInput);
     }
     if (charLength($('notes').value.trim()) > 500) {
       showFieldError('field-notes', 'notes-error', [$('notes')], 'Notes must be 500 characters or fewer.');
@@ -525,6 +583,8 @@ function renderReview() {
   // Same wording as the staff screens and emails: "Wheelchair × 2" from 2 (Milestone 11, plan D7).
   $('review-services').textContent = servicesText();
   $('review-escort').textContent = ESCORT_LABELS[selectedEscort()] || '';
+  // Milestone 16 (plan D6): "English · Taxi or shuttle".
+  $('review-extras').textContent = [languageText(), arrivalText()].filter(Boolean).join(' · ');
   const price = currentPrice();
   $('review-price').textContent = price ? formatPrice(price.total) : '';
 }
@@ -599,6 +659,9 @@ function renderSummary() {
   setSummaryValue('sum-travellers', travelers !== null && bags !== null ? `${travelers} · ${bags}` : '', '–');
   setSummaryValue('sum-services', servicesText(), 'None');
   setSummaryValue('sum-escort', ESCORT_LABELS[selectedEscort()] || '', 'Choose your escort');
+  // Milestone 16 (plan D5)
+  setSummaryValue('sum-language', languageText(), '–');
+  setSummaryValue('sum-arrival', arrivalText(), 'Choose how you arrive');
 
   // Meeting time: same formula and wording as the step 2 box; a typed flight has none yet.
   const meeting = meetingParts();
@@ -721,6 +784,10 @@ async function submitOrder() {
     services: selectedServices(),
     wheelchairs: selectedWheelchairs(), // the server refuses more than the travellers (FR-08)
     escort_scope: selectedEscort(),
+    // Milestone 16 (plan D9, D10)
+    escort_language: selectedLanguage(),
+    arrival_method: selectedArrival(),
+    traveller_names: selectedTravellerNames(), // the server refuses names with 1 traveller
     full_name: $('full-name').value.trim(),
     phone: $('phone').value.trim(),
     email: $('email').value.trim(),

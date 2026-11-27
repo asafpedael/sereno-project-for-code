@@ -344,7 +344,7 @@
             {
               "id": "5e7e0000-0000-4000-8000-000000000119",
               "name": "rows",
-              "value": "={{ [\n  { label: \"Meeting point\", value: $json.body.meeting_point },\n  { label: \"Order number\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"Departure\", value: $json.body.departure_local },\n  { label: \"Travellers\", value: $json.body.travelers },\n  { label: \"Checked bags\", value: $json.body.bags },\n  { label: \"Services\", value: ($json.body.services || []).join(', ') || 'None' },\n  { label: \"Escort\", value: $json.body.escort_scope },\n  { label: \"Estimated price\", value: $json.body.estimated_price }\n] }}",
+              "value": "={{ [\n  { label: \"Meeting point\", value: $json.body.meeting_point },\n  { label: \"Order number\", value: $json.body.reference },\n  { label: \"Flight\", value: [$json.body.flight_no, $json.body.destination].filter(Boolean).join(\" to \") },\n  { label: \"Departure\", value: $json.body.departure_local },\n  { label: \"Travellers\", value: $json.body.travelers },\n  { label: \"Checked bags\", value: $json.body.bags },\n  { label: \"Services\", value: ($json.body.services || []).join(', ') || 'None' },\n  { label: \"Escort\", value: $json.body.escort_scope },\n  { label: \"Escort language\", value: $json.body.escort_language },\n  { label: \"Getting to the airport\", value: $json.body.arrival_method },\n  { label: \"Estimated price\", value: $json.body.estimated_price }\n] }}",
               "type": "array"
             },
             {

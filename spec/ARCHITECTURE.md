@@ -173,6 +173,9 @@ customers 1 ───< N orders N >─── 1 flights
 | `services` | jsonb, not null, ברירת מחדל `[]` | מערך קודים מתוך `porter`, `wheelchair` |
 | `wheelchairs` | integer, **יכול להיות ריק**, בין 1 ל-10 ולא יותר מ-`travelers` | כמות כיסאות הגלגלים כש-`wheelchair` נמצא ב-`services`. ריק אחרת, ובהזמנות שלפני Milestone 11 (מוצג כ-"Wheelchair") |
 | `estimated_price` | integer, **יכול להיות ריק**, 0 ומעלה | המחיר המשוער בדולרים שלמים, שהשרת חישב ב-`public/js/price.js` בשליחה (Milestone 13). ריק בהזמנות שלפני Milestone 13 |
+| `traveller_names` | text, **יכול להיות ריק**, עד 300 תווים | שמות הנוסעים הנוספים כפי שהלקוח כתב (Milestone 16). ריק כשאין, כשיש נוסע אחד, ובהזמנות ישנות. לא נשלח ל-AI, ללקוח בבדיקת ההזמנה או במיילים |
+| `escort_language` | text, **יכול להיות ריק**, עד 20 תווים | קוד מ-`escort_languages` ב-`data/lists.json` (`en`, `he`, `ru`). ריק בהזמנות ישנות |
+| `arrival_method` | text, **יכול להיות ריק**, עד 20 תווים | קוד מ-`arrival_methods` ב-`data/lists.json` (`taxi`, `car`, `drop_off`, `train`). ריק בהזמנות ישנות |
 | `escort_scope` | text, not null | `full` או `partial`. בחירת הלקוח בלבד, אין עדכון שלה |
 | `customer_notes` | text | עד 500 תווים |
 | `status` | text, not null, ברירת מחדל `pending` | `pending`, `approved`, `rejected`, `needs_clarification`, `completed` |
@@ -536,13 +539,14 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
 ```json
 { "flight_id": "uuid", "flight_no": "DM101", "flight_date": null, "travelers": 2, "bags": 3,
   "services": ["porter"], "wheelchairs": null, "escort_scope": "full",
+  "traveller_names": "Maya A., Noam A.", "escort_language": "en", "arrival_method": "taxi",
   "full_name": "Daniel A.", "phone": "050-1110001", "email": "name@example.com", "notes": "",
   "approval_ack": true, "website": "" }
 ```
 `approval_ack` חייב להיות `true` (Milestone 10, FR-44). הוא לא נשמר.
 טיסה מהרשימה: `flight_id` ו-`flight_no`. טיסה שהלקוח הקליד: `flight_id = null`, `flight_no` ו-`flight_date` (`YYYY-MM-DD`, היום או מאוחר יותר). `website` הוא השדה הנסתר נגד בוטים, והדף שולח אותו תמיד ריק.
 
-ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `wheelchairs` מספר שלם מ-1 ועד `travelers` רק כש-`wheelchair` נבחר (חסר = 1), `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`, ו-`approval_ack = true`. שגיאה: `400 bad_request`.
+ולידציה: מספרים שלמים בטווח, `services` תת-קבוצה של הרשימה, `wheelchairs` מספר שלם מ-1 ועד `travelers` רק כש-`wheelchair` נבחר (חסר = 1), `escort_scope` מהרשימה, שם 2–80, טלפון ומייל תקינים, הערות עד 500, `flight_no` עד 20 תווים, `flight_date` תאריך תקין שאינו בעבר. חובה `flight_id` או `flight_date`, ו-`approval_ack = true`. `escort_language` ו-`arrival_method` קודים מהרשימות (חסר = ריק, בשביל דף שנפתח לפני העדכון), `traveller_names` אופציונלי, עד 300 תווים, ורק כש-`travelers` 2 ומעלה. שגיאה: `400 bad_request`.
 
 סדר פעולות:
 1. אם `website` אינו ריק: תשובת הצלחה רגילה עם אסמכתא אקראית, בלי לשמור ובלי מייל (החלטה 12).
@@ -578,9 +582,10 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
   "meeting_time": "...", "flight_change_pending": false,
   "meeting_point": "Departures hall, Terminal 3, before security.",
   "travelers": 2, "bags": 3, "services": "Porter / luggage help", "escort": "Full (to the gate)",
+  "escort_language": "English", "arrival_method": "Taxi or shuttle",
   "estimated_price": "$375" } } }
 ```
-`status` הוא סטטוס ללקוח: `pending` (גם `needs_clarification` לפני מייל הבירור), `check_email` (`needs_clarification` אחרי מייל הבירור), `approved`, `rejected`, `completed`. `meeting_time` הוא `final_time` רק ב-`approved` בלי שינוי טיסה ממתין וב-`completed`; אחרת `null`. `meeting_point` רק ב-`pending`, `check_email` ו-`approved`. טיסה שהוקלדה ולא נמצאה: `flight_no` ו-`date` שהוקלדו, `destination` ריק. `estimated_price` ריק בהזמנות שלפני Milestone 13. לא נשלחים הערות מנהל, `ai_output`, הערות הלקוח, שם, טלפון, מייל, נציג, `recommended_time` או המזהה המלא.
+`status` הוא סטטוס ללקוח: `pending` (גם `needs_clarification` לפני מייל הבירור), `check_email` (`needs_clarification` אחרי מייל הבירור), `approved`, `rejected`, `completed`. `meeting_time` הוא `final_time` רק ב-`approved` בלי שינוי טיסה ממתין וב-`completed`; אחרת `null`. `meeting_point` רק ב-`pending`, `check_email` ו-`approved`. טיסה שהוקלדה ולא נמצאה: `flight_no` ו-`date` שהוקלדו, `destination` ריק. `estimated_price` ריק בהזמנות שלפני Milestone 13. לא נשלחים שמות הנוסעים, הערות מנהל, `ai_output`, הערות הלקוח, שם, טלפון, מייל, נציג, `recommended_time` או המזהה המלא.
 
 כל מקרה שבו לא מוצג כלום (מספר לא קיים, מייל אחר, נעילה, שדה נסתר מלא) מחזיר `404 not_found` עם אותה הודעה: "We couldn't find an order with these details. Please check the order number and the email you booked with. After 5 tries, please wait 15 minutes before trying again." מספר או מייל לא תקינים מחזירים `400` ולא נספרים.
 
@@ -614,6 +619,7 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
   "customer": { "full_name": "...", "phone": "...", "email": "..." },
   "flight": { "flight_no": "DM101", "destination": "London", "departure_at": "..." },
   "travelers": 2, "bags": 3, "services": ["porter"], "wheelchairs": null, "escort_scope": "full",
+  "traveller_names": null, "escort_language": "en", "arrival_method": "taxi",
   "recommended_time": "...", "final_time": null, "manager_notes": null,
   "is_returning_customer": true, "flight_change_pending": false,
   "ai_output": { }
@@ -672,11 +678,13 @@ Milestone 14: `supabase/migrations/006_order_lookup.sql` מוסיף את `lookup
   "meeting_point": "Departures hall, Terminal 3, before security.",
   "escort_scope": "Full (to the gate)",
   "estimated_price": "$375",
+  "escort_language": "English",
+  "arrival_method": "Taxi or shuttle",
   "ai_paragraph": "..."
 }
 ```
 
-ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`, `customer_received`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean). `meeting_point` נשלח רק ב-`customer_approved` וב-`customer_flight_change`. ב-`services` כמות של 2 ומעלה נכתבת "Wheelchair × N" (Milestone 11). `estimated_price` (טקסט מעוצב, או null בהזמנה ישנה) נשלח ב-`customer_received` וב-`customer_approved` (Milestone 13).
+ערכי `type`: `manager_alert`, `customer_approved`, `customer_rejected`, `customer_clarification`, `customer_flight_change`, `customer_received`. הגוף **לא** כולל הערות מנהל. עבור `customer_clarification` השדה `ai_paragraph` מכיל את פסקת הבירור, ו-`flight_no` ו-`departure_local` הם המספר והתאריך שהלקוח הקליד. עבור `customer_flight_change` נוסף `previous_meeting_time_local`. עבור `manager_alert` אין `to` (הכתובת מוגדרת ב-n8n) ונוסף `needs_clarification` (boolean). `meeting_point` נשלח רק ב-`customer_approved` וב-`customer_flight_change`. ב-`services` כמות של 2 ומעלה נכתבת "Wheelchair × N" (Milestone 11). `estimated_price` (טקסט מעוצב, או null בהזמנה ישנה) נשלח ב-`customer_received` וב-`customer_approved` (Milestone 13). `escort_language` ו-`arrival_method` (תוויות, או null בהזמנה ישנה) נשלחים ב-`customer_approved` (ומכאן גם ב-`customer_flight_change`, בלי להופיע בתבנית שלו) (Milestone 16). שמות הנוסעים לא נשלחים באף מייל.
 
 ### 5.3 תהליך ב-n8n
 
@@ -837,7 +845,8 @@ sereno/                          ריפו ציבורי, ענף main
 │   │   ├── 003_agent_assignment.sql  שיבוץ נציג (Milestone 9)
 │   │   ├── 004_wheelchairs.sql       כמות כיסאות גלגלים (Milestone 11)
 │   │   ├── 005_estimated_price.sql   מחיר משוער (Milestone 13)
-│   │   └── 006_order_lookup.sql      בדיקת הזמנה ללקוח (Milestone 14)
+│   │   ├── 006_order_lookup.sql      בדיקת הזמנה ללקוח (Milestone 14)
+│   │   └── 007_order_details.sql     פרטים נוספים בהזמנה (Milestone 16)
 │   └── seed/
 │       ├── seed.sql             נתוני דמה
 │       └── assign-demo.sql      שיבוץ לבדיקה (Milestone 9)
@@ -1153,3 +1162,18 @@ sereno/                          ריפו ציבורי, ענף main
 **Context:** Asaf chose a floating button on every customer page (landing, order form, order lookup), not on the staff screens.
 **Decision:** `public/js/chat.js` and `public/css/chat.css` are linked from the three pages; the script adds the button and the window to the page itself, built with `el` / `textContent`. The button is a small round icon (52px; 48px on phones), deep navy with a thin gold ring and a gold chat icon, named "Questions? Ask Sereno" for screen readers and as a tooltip (Asaf, 27.11.2026, after seeing the first, wider gold button). Phones (under 600px) get a full-screen chat; on the order form under 900px the button sits above the M13 "Your escort" bar and is hidden while the summary is open, and the form gets extra room at the bottom. On the landing page the hero's "Departures only" corner is kept clear of the button (room below it on phones and tablets, room to its right on computers), and the footer gets room on phones. A link answer ("Check your order", "Book your escort") is left out on the page it points to. Nothing is saved in the browser; the list is loaded only when the chat is first opened.
 **Consequences:** The landing page now loads one small script (it had none). Like any floating button, it passes over content while the page scrolls; on short phones (about 667px tall) it sits over part of the hero's corner line in the first view until the page is scrolled.
+
+### ADR-51: Three optional columns on `orders` for the M16 details, added without breaking the live site
+**Context:** Milestone 16 (FR-49) collects the other travellers' names, the escort language and the way to the airport. MILESTONES keeps them on `orders` (no fourth table), and one Supabase project serves both the live site and development.
+**Decision:** `007_order_details.sql` adds `traveller_names` (text, up to 300 characters), `escort_language` and `arrival_method` (text codes, up to 20 characters), all optional, and gives `insert_order_with_limits` three last parameters with defaults (ADR-40 / ADR-44 pattern; the 17-parameter version is dropped). `validateOrderBody` refuses an unknown code, but stores a missing code as empty, so a page opened before the deploy still sends its order (Asaf, O3). Names are trimmed line by line, and refused with one traveller.
+**Consequences:** Asaf ran 007 before the push (27.11.2026). Orders saved before M16, or from an old page during the deploy, show none of the new details. Re-running 005 after 007 would create a second insert function, so 005 carries a note to run 007 instead.
+
+### ADR-52: The language and arrival lists live in `data/lists.json`, with length-only database checks
+**Context:** Asaf chose English, Hebrew, Russian and four ways to the airport (Taxi or shuttle, Driving and parking, Drop-off, Train), and the list of languages follows the escorts he has.
+**Decision:** `data/lists.json` holds `escort_languages` and `arrival_methods` (code and label). The server validates against them and the staff pages read the labels through `GET /api/config`; the order form, which does not load the config, writes the same options in `order.html`, and a test checks that the two match. The database checks only the length of the codes.
+**Consequences:** Adding a language is an edit of `lists.json` and `order.html` and a push, with no migration. An unknown stored code is shown as the code.
+
+### ADR-53: Who sees the M16 details: staff everything, the customer no names, the AI nothing
+**Context:** Asaf chose (27.11.2026) all three details on every staff screen, the language and the way to the airport in the approval email and the order lookup, and no change to the AI.
+**Decision:** `toManagerView` and `toAgentView` carry all three (`orderExtras`). `toCustomerView` and `approvedEmailPayload` carry only the language and arrival labels; `LOOKUP_SELECT` does not read `traveller_names`, and no email payload has it. `buildOrderDraftInput` is unchanged. The n8n "Set customer_approved" node gets two rows ("Escort language", "Getting to the airport"), added by Asaf by hand after the push. To keep the desktop "Your escort" summary beside the form on a 1280 × 800 screen with its two new rows, its rows sit in two columns from 900px.
+**Consequences:** Tests check that the names never reach the lookup reply, any email payload or the AI input. Until Asaf's n8n edit the approval email shows no new rows; nothing breaks.

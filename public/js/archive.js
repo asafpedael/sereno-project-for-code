@@ -13,7 +13,7 @@ import { requireRole, bindLogout, staffGet, staffPost } from './session.js';
 import { showingText, totalPages, pageNumbers, GAP } from './paging.js';
 import {
   returningTag, orderTag, dataItem, detailsGrid, aiPanel, missingFlightPanel, flightChangePanel,
-  customerPanel, clearHistory, notesField, setLabels, servicesText, escortText,
+  customerPanel, clearHistory, notesField, setLabels, servicesText, escortText, languageText, arrivalText,
   loadAgents, agentField, agentNameFor, NOT_ASSIGNED,
 } from './order-details.js';
 
@@ -396,12 +396,20 @@ function agentPanel(order) {
     el('div', { className: 'agent-card__person' },
       el('span', { className: 'agent-card__name' }, order.customer.full_name),
       el('a', { className: 'agent-card__phone', attrs: { href: telHref(order.customer.phone) } }, order.customer.phone)),
+    // Milestone 16 (plan D13): the same names line and items as the agent's card.
+    order.traveller_names
+      ? el('div', { className: 'agent-card__also' },
+        el('span', { className: 'agent-card__label' }, 'Also travelling'),
+        el('span', { className: 'agent-card__value' }, order.traveller_names))
+      : null,
     el('div', { className: 'agent-card__grid' },
       agentItem('Flight', flightText(order.flight)),
       // The short forms of the agent card: "–" for no services, "Full" for "Full (to the gate)".
       agentItem('Services', order.services.length ? servicesText(order) : '–'),
       agentItem('Travellers · Bags', `${order.travelers} · ${order.bags}`),
-      agentItem('Escort', escortText(order).replace(/\s*\(.*\)\s*$/, ''))));
+      agentItem('Escort', escortText(order).replace(/\s*\(.*\)\s*$/, '')),
+      order.escort_language ? agentItem('Language', languageText(order)) : null,
+      order.arrival_method ? agentItem('Getting there', arrivalText(order)) : null));
   if (order.manager_notes) {
     card.append(el('div', { className: 'agent-card__notes' },
       el('span', { className: 'agent-card__label' }, 'Manager notes'),

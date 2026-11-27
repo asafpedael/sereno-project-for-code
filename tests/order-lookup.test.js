@@ -11,6 +11,7 @@ const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), 'utf
 const VIEW_KEYS = [
   'reference', 'status', 'flight', 'meeting_time', 'flight_change_pending', 'meeting_point',
   'travelers', 'bags', 'services', 'escort', 'estimated_price',
+  'escort_language', 'arrival_method', // Milestone 16 (never the traveller names)
 ].sort();
 
 const SECRET_TEXTS = ['MANAGER-SECRET', 'CUSTOMER-SECRET', '050-9999999', 'AI-SECRET', 'agent-uuid', 'Secret Name', 'secret@example.com'];

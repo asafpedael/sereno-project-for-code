@@ -411,3 +411,7 @@
 @media (min-width: 900px) {
   .approvals__placeholder:not([hidden]) { display: block; margin: 0; padding: var(--space-4); }
 }
+
+/* Milestone 16 (plan D12, D13): the other travellers' names keep the customer's line breaks. */
+.agent-card__also .agent-card__value,
+.details-grid__value { white-space: pre-line; }

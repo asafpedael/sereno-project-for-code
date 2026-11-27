@@ -3,6 +3,7 @@
 -- Safe while the previous version of the site is live: the new column may be empty, and
 -- p_estimated_price has a default, so a call without it still saves an order (the column stays empty).
 -- Nothing is deleted or changed in existing orders.
+-- Note: 007_order_details.sql replaces insert_order_with_limits (20 parameters); after 007, run 007 again instead of this file.
 
 -- 1. The estimate in whole US dollars, worked out by the server (public/js/price.js) when the
 --    order is sent. Empty in every order saved before Milestone 13 (no price is shown for them).

@@ -42,6 +42,8 @@
             <div><dt>Travellers · Bags</dt><dd id="sum-travellers"></dd></div>
             <div><dt>Services</dt><dd id="sum-services"></dd></div>
             <div><dt>Escort</dt><dd id="sum-escort"></dd></div>
+            <div><dt>Language</dt><dd id="sum-language"></dd></div>
+            <div><dt>Getting there</dt><dd id="sum-arrival"></dd></div>
           </dl>
           <div class="summary__meet">
             <p class="summary__label">Suggested meeting time</p>
@@ -190,6 +192,38 @@
             </label>
           </fieldset>
           <p class="field__error" id="escort-error" hidden></p>
+
+          <!-- Milestone 16 (plan D1-D3): the escort language and the way to the airport, both
+               required. The codes and labels match data/lists.json (checked by a test). -->
+          <div class="trip-details stack-lg">
+            <div class="field" id="field-language">
+              <label class="field__label" for="escort-language">Preferred language for your escort</label>
+              <select class="input order-select" id="escort-language">
+                <option value="en" selected>English</option>
+                <option value="he">Hebrew</option>
+                <option value="ru">Russian</option>
+              </select>
+            </div>
+            <fieldset class="field" id="field-arrival" aria-describedby="arrival-hint arrival-error">
+              <legend class="field__label">How will you get to the airport?</legend>
+              <div class="arrival-grid">
+                <label class="arrival"><input class="arrival__input" type="radio" name="arrival_method" value="taxi">
+                  <svg class="arrival__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 15h16v-4l-2-5H6l-2 5zM6 18v-3M18 18v-3M4 11h16"/></svg>
+                  <span class="arrival__text">Taxi or shuttle</span></label>
+                <label class="arrival"><input class="arrival__input" type="radio" name="arrival_method" value="car">
+                  <svg class="arrival__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 20V4h6a4 4 0 010 8H7"/></svg>
+                  <span class="arrival__text">Driving and parking</span></label>
+                <label class="arrival"><input class="arrival__input" type="radio" name="arrival_method" value="drop_off">
+                  <svg class="arrival__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 12h13M11 6l6 6-6 6M21 4v16"/></svg>
+                  <span class="arrival__text">Drop-off</span></label>
+                <label class="arrival"><input class="arrival__input" type="radio" name="arrival_method" value="train">
+                  <svg class="arrival__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M7 3h10v12H7zM7 11h10M9 15v4M15 15v4M9 19l-2 2M15 19l2 2"/></svg>
+                  <span class="arrival__text">Train</span></label>
+              </div>
+              <p class="field__hint" id="arrival-hint">So your escort knows how you are arriving.</p>
+              <p class="field__error" id="arrival-error" hidden></p>
+            </fieldset>
+          </div>
         </section>
 
         <!-- Step 4: Your details -->
@@ -212,6 +246,15 @@
             <input class="input" id="email" type="email" maxlength="254" autocomplete="email"
                    placeholder="name@example.com" aria-describedby="email-error">
             <p class="field__error" id="email-error" hidden></p>
+          </div>
+          <!-- Milestone 16 (plan D4): the other travellers' names, optional, only with 2 or more travellers -->
+          <div class="field" id="field-traveller-names" hidden>
+            <label class="field__label" for="traveller-names">Other travellers (optional)</label>
+            <textarea class="textarea textarea--short" id="traveller-names" rows="3" maxlength="300"
+                      placeholder="e.g. Maya Avraham, Noam Avraham"
+                      aria-describedby="traveller-names-hint traveller-names-error"></textarea>
+            <p class="field__hint" id="traveller-names-hint">Their full names, so your escort can greet everyone.</p>
+            <p class="field__error" id="traveller-names-error" hidden></p>
           </div>
           <div class="field" id="field-notes">
             <label class="field__label" for="notes">Notes (optional)</label>
@@ -239,6 +282,10 @@
               <div class="data-row">
                 <div><p class="data-row__label">Escort</p><p class="data-row__value" id="review-escort"></p></div>
                 <button class="link-button" type="button" data-edit-step="3" aria-label="Edit escort scope">Edit</button>
+              </div>
+              <div class="data-row">
+                <div><p class="data-row__label">Language · Getting there</p><p class="data-row__value" id="review-extras"></p></div>
+                <button class="link-button" type="button" data-edit-step="3" aria-label="Edit language and how you get to the airport">Edit</button>
               </div>
               <div class="data-row">
                 <div><p class="data-row__label">Estimated price</p><p class="data-row__value" id="review-price"></p></div>

@@ -14,5 +14,16 @@
     { "code": "full", "label": "Full (to the gate)" },
     { "code": "partial", "label": "Partial (to security)" }
   ],
+  "escort_languages": [
+    { "code": "en", "label": "English" },
+    { "code": "he", "label": "Hebrew" },
+    { "code": "ru", "label": "Russian" }
+  ],
+  "arrival_methods": [
+    { "code": "taxi", "label": "Taxi or shuttle" },
+    { "code": "car", "label": "Driving and parking" },
+    { "code": "drop_off", "label": "Drop-off" },
+    { "code": "train", "label": "Train" }
+  ],
   "meeting_point": "Departures hall, Terminal 3, before security."
 }

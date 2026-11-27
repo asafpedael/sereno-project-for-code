@@ -44,6 +44,8 @@ test('approved email: order details and the final meeting time in Israel time', 
     escort_scope: 'Full (to the gate)',
     meeting_point: 'Departures hall, Terminal 3, before security.',
     estimated_price: null, // the row has no price (an order saved before Milestone 13)
+    escort_language: null, // Milestone 16: empty in an order saved before M16
+    arrival_method: null,
     ai_paragraph: 'Hello Daniel, thank you for choosing Sereno.',
   });
 });

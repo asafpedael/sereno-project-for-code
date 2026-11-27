@@ -18,7 +18,7 @@ const listLoading = document.getElementById('list-loading');
 const refreshButton = document.getElementById('refresh');
 const statusLine = document.getElementById('status-line');
 
-let labels = { services: {}, escort_scopes: {} };
+let labels = { services: {}, escort_scopes: {}, escort_languages: {}, arrival_methods: {} };
 // Milestone 11 (plan D1, D2): the fixed meeting point from data/lists.json, via /api/config.
 let meetingPoint = '';
 let orders = [];
@@ -48,6 +48,21 @@ function servicesText(order) {
 function telHref(phone) {
   const cleaned = String(phone).replace(/[^\d+]/g, '').replace(/(?!^)\+/g, '');
   return `tel:${cleaned}`;
+}
+
+// Milestone 16 (plan D13): the names line under the customer, and two more grid items.
+function namesLine(order) {
+  return order.traveller_names
+    ? el('div', { className: 'agent-card__also' },
+      el('span', { className: 'agent-card__label' }, 'Also travelling'),
+      el('span', { className: 'agent-card__value' }, order.traveller_names))
+    : null;
+}
+function extraItems(order) {
+  const list = [];
+  if (order.escort_language) list.push(item('Language', labels.escort_languages[order.escort_language] || order.escort_language));
+  if (order.arrival_method) list.push(item('Getting there', labels.arrival_methods[order.arrival_method] || order.arrival_method));
+  return list;
 }
 
 function item(label, value) {
@@ -82,11 +97,13 @@ function card(order, index) {
         // M9 (plan D13, O5): his own orders; unassigned orders have no tag.
         order.assigned_to_me ? el('span', { className: 'tag tag-returning agent-card__tag' }, 'Assigned to you') : null),
       el('a', { className: 'agent-card__phone', attrs: { href: telHref(order.customer.phone) } }, order.customer.phone)),
+    ...(order.traveller_names ? [namesLine(order)] : []),
     el('div', { className: 'agent-card__grid' },
       item('Flight', flightText),
       item('Services', servicesText(order)),
       item('Travellers · Bags', `${order.travelers} · ${order.bags}`),
-      item('Escort', escortText(order.escort_scope))),
+      item('Escort', escortText(order.escort_scope)),
+      ...extraItems(order)),
   );
   // Milestone 11 (plan D2): the same meeting point on every card, above the manager notes.
   if (meetingPoint) {
@@ -185,7 +202,12 @@ async function start() {
   });
   try {
     const config = await getJson('/api/config');
-    labels = { services: labelMap(config.lists.services), escort_scopes: labelMap(config.lists.escort_scopes) };
+    labels = {
+      services: labelMap(config.lists.services),
+      escort_scopes: labelMap(config.lists.escort_scopes),
+      escort_languages: labelMap(config.lists.escort_languages),
+      arrival_methods: labelMap(config.lists.arrival_methods),
+    };
     meetingPoint = typeof config.lists.meeting_point === 'string' ? config.lists.meeting_point : '';
   } catch {
     // Labels are optional: codes are shown instead.

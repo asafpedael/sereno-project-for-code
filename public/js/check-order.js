@@ -104,6 +104,9 @@ function showResult(order) {
   items.append(...[
     item('Travellers · Bags', `${order.travelers} · ${order.bags}`),
     item('Escort', order.escort),
+    // Milestone 16 (plan D14): never the names (the server does not send them).
+    item('Escort language', order.escort_language),
+    item('Getting there', order.arrival_method),
     item('Services', order.services),
     item('Estimated price', order.estimated_price),
   ].filter(Boolean));

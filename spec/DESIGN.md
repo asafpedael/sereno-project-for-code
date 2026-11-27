@@ -82,7 +82,7 @@
 - כותרת כהה עם השם Sereno ומונה "Step X of 4".
 - מחוון התקדמות בן ארבעה קטעים: Flight, Travellers, Escort, Details. שלבים שהושלמו בכחול כהה, השלב הנוכחי בזהב, שלבים שנותרו באפור.
 - כפתורים בתחתית: "Back" (מסגרת) ו-"Next" (זהב). בשלב 1 יש רק "Next".
-- סיכום "Your escort" (Milestone 13): בדסקטופ כרטיס כהה עם קו זהב עליון בתוך פאנל השקיעה, מתחת לכותרת. שורות Flight, Departure, Travellers · Bags, Services, Escort, תיבת "Suggested meeting time" עם השעה בזהב, ופירוט המחיר עם "Estimated price", הסכום בגופן הכותרות והטקסט "No payment now. The final price is confirmed with your booking." לפני בחירת ליווי: "Choose your escort to see your price." בטלפון: פס בתחתית המסך, "Your escort · Meet 12:45" ו-"$375", שלחיצה עליו פותחת את הסיכום המלא.
+- סיכום "Your escort" (Milestone 13): בדסקטופ כרטיס כהה עם קו זהב עליון בתוך פאנל השקיעה, מתחת לכותרת. שורות Flight, Departure, Travellers · Bags, Services, Escort, Language ו-Getting there (Milestone 16; לפני בחירה: "Choose how you arrive"), תיבת "Suggested meeting time" עם השעה בזהב, ופירוט המחיר עם "Estimated price", הסכום בגופן הכותרות והטקסט "No payment now. The final price is confirmed with your booking." לפני בחירת ליווי: "Choose your escort to see your price." בטלפון: פס בתחתית המסך, "Your escort · Meet 12:45" ו-"$375", שלחיצה עליו פותחת את הסיכום המלא.
 
 ### שלב 1: Flight (Order · Flight)
 - **מטרה:** לבחור את הטיסה מתוך הטבלה הפנימית, לא בטקסט חופשי.
@@ -97,12 +97,12 @@
 
 ### שלב 3: Escort (Order · Escort)
 - **מטרה:** הלקוח בוחר את היקף הליווי. הבחירה שלו בלבד, והמנהל לא יכול לשנות אותה.
-- **מה יש:** כותרת "Escort scope". שני כרטיסי בחירה עם כפתור רדיו: "Full — Escort to the gate" ו-"Partial — Escort through security". הכרטיס הנבחר מסומן במסגרת כחולה עבה. בכל כרטיס, בפינה הימנית העליונה, "from $300" או "from $200", ומתחת לטקסט ציור מסלול: שלוש נקודות, "Meeting point", "Security", "Gate". בליווי מלא קו זהב מלא ושלוש נקודות מלאות; בחלקי קו מלא עד "Security", מקווקו אחריו ונקודה ריקה ב-"Gate" (Milestone 13).
-- **מה קורה:** "Next" עובר לשלב 4, "Back" חוזר לשלב 2.
+- **מה יש:** כותרת "Escort scope". שני כרטיסי בחירה עם כפתור רדיו: "Full — Escort to the gate" ו-"Partial — Escort through security". הכרטיס הנבחר מסומן במסגרת כחולה עבה. בכל כרטיס, בפינה הימנית העליונה, "from $300" או "from $200", ומתחת לטקסט ציור מסלול: שלוש נקודות, "Meeting point", "Security", "Gate". בליווי מלא קו זהב מלא ושלוש נקודות מלאות; בחלקי קו מלא עד "Security", מקווקו אחריו ונקודה ריקה ב-"Gate" (Milestone 13). מתחת לכרטיסים, אחרי קו דק (Milestone 16): "Preferred language for your escort" ברשימה נפתחת (English, Hebrew, Russian; מתחילה ב-English), ו-"How will you get to the airport?" עם ארבעה כפתורים ברשת 2 × 2, כל אחד עם אייקון קו זהב: "Taxi or shuttle", "Driving and parking", "Drop-off", "Train". הכפתור הנבחר במסגרת זהב. מתחת הטקסט "So your escort knows how you are arriving."
+- **מה קורה:** "Next" עובר לשלב 4, "Back" חוזר לשלב 2. "Next" בלי בחירת דרך הגעה מציג מתחת לכפתורים "Please choose how you will get to the airport."
 
 ### שלב 4: Details (Order · Details and review)
 - **מטרה:** פרטי קשר וסקירה אחרונה לפני שליחה.
-- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ולכל שורה קישור "Edit", ושורה חמישית "Estimated price" בלי "Edit" (Milestone 13). בשורת Services כמה כיסאות: "Wheelchair × 2" (כיסא אחד: "Wheelchair"). אחרי הסקירה, פאנל קצר עם ארבעת כללי ההזמנה: "Departures only.", "Every booking is subject to manager approval.", "Suggestions shown are recommendations only.", "We email you the decision.", וממש מתחתיו תיבת סימון "I understand my booking is subject to manager approval." (לא מסומנת בהתחלה, Milestone 10). כפתורים "Back" ו-"Submit request".
+- **מה יש:** כותרת "Your details". שדות עם תווית מעל: "Full name", "Phone", "Email", "Other travellers (optional)" (תיבת טקסט, רק כשיש 2 נוסעים ומעלה, עם "e.g. Maya Avraham, Noam Avraham" והטקסט "Their full names, so your escort can greet everyone."; Milestone 16), "Notes (optional)". אחריהם "Review": ארבע שורות, Flight, Travellers and bags, Services, Escort, ושורה "Language · Getting there" עם "Edit" לשלב 3 (Milestone 16), ולכל שורה קישור "Edit", ושורה חמישית "Estimated price" בלי "Edit" (Milestone 13). בשורת Services כמה כיסאות: "Wheelchair × 2" (כיסא אחד: "Wheelchair"). אחרי הסקירה, פאנל קצר עם ארבעת כללי ההזמנה: "Departures only.", "Every booking is subject to manager approval.", "Suggestions shown are recommendations only.", "We email you the decision.", וממש מתחתיו תיבת סימון "I understand my booking is subject to manager approval." (לא מסומנת בהתחלה, Milestone 10). כפתורים "Back" ו-"Submit request".
 - **מה קורה:** "Edit" מאפשר לתקן כל חלק לפני השליחה. "Submit request" שולח את ההזמנה למנהל ועובר ל"Request received". בלי הסימון הוא מציג מתחת לתיבה "Please confirm to send your request." ולא שולח. אם השרת מחזיר "Too many requests, please try again later", ההודעה מוצגת מעל הכפתורים בתיבת שגיאה (Error Tint), והנתונים נשמרים.
 
 ### Request received
@@ -123,7 +123,7 @@
 - כותרת "Orders awaiting decision" ומסנן "Status: All".
 - אפשרויות המסנן: Status: All, Pending, Needs clarification, Flight time changed.
 - **רשימת הזמנות (שמאל):** לכל הזמנה שם הלקוח, מספר הטיסה, יעד, זמן, מספר נוסעים ותגיות סטטוס: Pending, Returning, Needs clarification, Flight time changed. ההזמנה הנבחרת מסומנת בפס זהב.
-- **פרטי ההזמנה (ימין):** כותרת "Order A1B2C3D4" ותגית סטטוס. Customer, Phone / Email, Flight, Departure, Travellers · Bags, Services · Escort, ו-"Estimated price" כשיש (Milestone 13). תיבות "Customer notes" ו-"Customer history", ותיבת "AI recommendations" עם שירותים מומלצים וטיוטת מייל. שדה "Meeting time" (עם הערה "Recommended 12:45"), שדה "Manager notes" ("Add a note for the field agent"). שדה "Field agent" (Milestone 9): רשימת הנציגים, וברירת המחדל "Not assigned (all agents)". הבחירה לא חובה. כפתורים "Reject" ו-"Approve".
+- **פרטי ההזמנה (ימין):** כותרת "Order A1B2C3D4" ותגית סטטוס. Customer, Phone / Email, "Also travelling" ו-"Language · Getting there" כשיש (Milestone 16), Flight, Departure, Travellers · Bags, Services · Escort, ו-"Estimated price" כשיש (Milestone 13). תיבות "Customer notes" ו-"Customer history", ותיבת "AI recommendations" עם שירותים מומלצים וטיוטת מייל. שדה "Meeting time" (עם הערה "Recommended 12:45"), שדה "Manager notes" ("Add a note for the field agent"). שדה "Field agent" (Milestone 9): רשימת הנציגים, וברירת המחדל "Not assigned (all agents)". הבחירה לא חובה. כפתורים "Reject" ו-"Approve".
 
 **מה קורה במסך:**
 - בחירת הזמנה מהרשימה מציגה את הפרטים שלה.
@@ -143,7 +143,7 @@
 **מה יש במסך:**
 - כותרת כהה: השם Sereno, תפריט תפקיד "Field agent" וכפתור "Log out". מתחתיה לשוניות "Orders" (פעילה) ו-"Archive".
 - כותרת "Approved orders" וכפתור "Refresh".
-- רשימת כרטיסים, כרטיס לכל הזמנה מאושרת. בכל כרטיס: "Meeting time" בגדול, ומתחתיה התאריך בקטן, "Departure", שם הלקוח, מספר טלפון (מוצג כקישור), Flight, Services, Travellers · Bags, Escort, ובתיבה נפרדת "Manager notes" כשיש הערות. תיבה "Meeting point" עם נקודת המפגש הקבועה, בכל כרטיס (Milestone 11). הכרטיס הראשון מסומן בפס זהב.
+- רשימת כרטיסים, כרטיס לכל הזמנה מאושרת. בכל כרטיס: "Meeting time" בגדול, ומתחתיה התאריך בקטן, "Departure", שם הלקוח, מספר טלפון (מוצג כקישור), "Also travelling" עם שמות הנוסעים הנוספים כשיש, Flight, Services, Travellers · Bags, Escort, Language ו-Getting there כשיש (Milestone 16), ובתיבה נפרדת "Manager notes" כשיש הערות. תיבה "Meeting point" עם נקודת המפגש הקבועה, בכל כרטיס (Milestone 11). הכרטיס הראשון מסומן בפס זהב.
 - בכרטיס של הזמנה ששובצה לנציג עצמו, תגית "Assigned to you" ליד שם הלקוח.
 - בתחתית כל כרטיס כפתור משני קטן "Mark completed" (לא מופיע בתמונות).
 - בתחתית קישור "Archive · opens on desktop".
@@ -181,7 +181,7 @@
 
 **מה יש במסך:** עמודה אחת במראה הכהה (`check-order.html`), עם אותה כותרת עליונה כמו בטופס. "Your booking" (תווית קטנה באותיות גדולות), הכותרת "Check your order", המשפט "Enter the order number from your confirmation and the email you booked with.", השדות "Order number" ו-"Email", והכפתור "Check order".
 
-**התוצאה:** "Order A1B2C3D4", כותרת ומשפט לפי הסטטוס (Awaiting manager review / Please check your email / Your escort is confirmed / Not approved / Completed), כרטיס הטיסה מ-Milestone 13 עם "Meeting time" ותגית הסטטוס בצד, תיבת "Meeting point" בקו דק, ו-Travellers · Bags, Escort, Services ו-Estimated price. שעת המפגש מוצגת רק אחרי אישור; כשהטיסה השתנתה וממתינה למנהל: "Being updated". מתחת "Check another order" ו-"Back to home".
+**התוצאה:** "Order A1B2C3D4", כותרת ומשפט לפי הסטטוס (Awaiting manager review / Please check your email / Your escort is confirmed / Not approved / Completed), כרטיס הטיסה מ-Milestone 13 עם "Meeting time" ותגית הסטטוס בצד, תיבת "Meeting point" בקו דק, ו-Travellers · Bags, Escort, Escort language, Getting there, Services ו-Estimated price (בלי שמות הנוסעים). שעת המפגש מוצגת רק אחרי אישור; כשהטיסה השתנתה וממתינה למנהל: "Being updated". מתחת "Check another order" ו-"Back to home".
 
 **הודעת שגיאה אחת** לכל מקרה שבו לא מוצג כלום (מספר שגוי, מייל אחר, נעילה): "We couldn't find an order with these details. Please check the order number and the email you booked with. After 5 tries, please wait 15 minutes before trying again."
 
@@ -221,6 +221,7 @@
 - **טופס הזמנה עשיר ומחיר משוער (Milestone 13, החלטה של אסף, 27.11.2026):** הסיכום, כרטיס הטיסה, ציור המסלול (רכיב "סימון מסלול" מה-Style Guide) ומסך הסיום ככרטיס נבנים במראה הכהה, בלי צללים, כרטיסים בפינות 2px ושדות בפינות 8px. "Order number" מחליף את "Reference" בכל המסכים והמיילים. המחירים בדולרים ומגיעים רק מרשימת המחירים (PRD, סעיף 3).
 - **בדיקת הזמנה (Milestone 14, החלטה של אסף, 27.11.2026):** הדף לא מופיע בתמונות. הוא בנוי מרכיבים קיימים: כרטיס הטיסה, תגיות הסטטוס ותיבת נתונים בקו דק.
 - **צ'אט "Ask Sereno" (Milestone 15, החלטה של אסף, 27.11.2026):** לא מופיע בתמונות. כפתור עגול קטן וצף (52px, בטלפון 48px; כחול כהה, טבעת זהב דקה ואייקון צ'אט בזהב, ובמעבר עכבר מתמלא בזהב; החלטה של אסף אחרי שראה את הכפתור הרחב) בדף הנחיתה, בטופס ההזמנה (בטלפון מעל פס "Your escort") ובדף בדיקת ההזמנה. בדסקטופ חלון של 380px מעל הכפתור, ובטלפון מסך מלא. במראה הכהה: קו זהב עליון, בועות הלקוח בזהב עם טקסט כהה, בועות Sereno בכחול כהה, שאלות נפוצות ככפתורים עם קו זהב דק, ואחריהן "See all questions" בטקסט זהב עם קו תחתון, שמציג את כל השאלות ככפתורים תחת "These are all the questions I can answer:", שדה "Type your question" וכפתור "Send". בלי צללים, בועות בפינות 2px, כפתורים ושדה בפינות 8px.
+- **פרטים נוספים בטופס (Milestone 16, החלטה של אסף, 27.11.2026):** לא מופיעים בתמונות. הרשימה הנפתחת, ארבעת כפתורי ההגעה עם אייקוני קו (רכיב "אייקונים" מה-Style Guide) ותיבת השמות נבנים במראה הכהה, באותו סגנון של השדות וכרטיסי הבחירה: פינות 8px, מסגרת זהב לבחירה, בלי צללים.
 
 ## עיצוב "אתרי" לטופס ולמסכי הצוות (עודכן 22.11.2026, החלטה של אסף, Milestone 6)
 
